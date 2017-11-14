@@ -6,20 +6,26 @@ if type.nil?
   exit(1)
 end
 
-puts "Each new line is a new message. C-d to finish."
-
-socket =
-  case type
-  when 'unix'
-    UNIXSocket.new '/tmp/kinesis-dispatcher.sock'
-  when 'tcp'
-    TCPSocket.new 'localhost', 8888
-  else
-    raise "type %s not supported"
-  end
-
-while (msg = STDIN.gets)
-  socket.write(msg)
+def send_message(type, content)
+  socket =
+    case type
+    when 'unix'
+      UNIXSocket.new '/tmp/kinesis-dispatcher.sock'
+    when 'tcp'
+      TCPSocket.new 'localhost', 8888
+    else
+      raise "type %s not supported"
+    end
+  socket.write(content)
+  socket.close
 end
 
-socket.close
+def messages(type)
+  m1 = "Hello there\nHello"
+  m2 = "Goodbye man\nThat was good"
+  send_message(type, m1)
+  send_message(type, m2)
+end
+
+
+messages(type)
