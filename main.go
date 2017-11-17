@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -10,7 +11,11 @@ import (
 )
 
 func main() {
-	config := NewConfig()
+	config := &Config{}
+	ParseFromCommandLine(config)
+	if !config.Validate() {
+		log.Fatal(fmt.Sprintf("Invalid socket type (%s)", config.socketType))
+	}
 	var dispatcher Dispatcher
 	if config.echoMode {
 		fmt.Println("Mode: echo")
