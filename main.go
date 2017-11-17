@@ -13,5 +13,12 @@ func main() {
 		dispatcher = NewKinesisDispatcher(config)
 		go dispatcher.Dispatch()
 	}
-	Serve(config, RequestHandler, dispatcher)
+	// setup a hook which will fire when the server is up and running
+	// currently used only in tests
+	running := make(chan bool)
+	go func() {
+		<-running
+	}()
+	// TODO: capture interrupt signals and stop server OR use Context
+	Serve(config, RequestHandler, dispatcher, running)
 }

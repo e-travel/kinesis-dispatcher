@@ -8,6 +8,7 @@ import (
 	"os"
 )
 
+// TODO: what if this function panics?
 func RequestHandler(conn io.Reader, dispatcher Dispatcher) {
 	b, err := ioutil.ReadAll(conn)
 	if err != nil {
@@ -17,8 +18,8 @@ func RequestHandler(conn io.Reader, dispatcher Dispatcher) {
 	dispatcher.Put(b)
 }
 
-func Serve(config *Config, handler func(io.Reader, Dispatcher), dispatcher Dispatcher) {
-	log.Printf("%s socket server listening to %s", config.socketType, config.socketAddress)
+func Serve(config *Config, handler func(io.Reader, Dispatcher), dispatcher Dispatcher, running chan<- bool) {
+
 	// remove any existing socket file
 	if config.socketType == "unix" {
 		os.Remove(config.socketAddress)
@@ -28,6 +29,7 @@ func Serve(config *Config, handler func(io.Reader, Dispatcher), dispatcher Dispa
 		log.Fatal(err)
 	}
 	defer listener.Close()
+	running <- true
 
 	for {
 		conn, err := listener.Accept()
