@@ -28,5 +28,7 @@ func (dispatcher *BufferedDispatcher) Put(message []byte) bool {
 
 // fetches messages from the queue and dispatches to kinesis
 func (dispatcher *BufferedDispatcher) Dispatch() {
-	// TODO: think about batch processing
+	for message := range dispatcher.queue {
+		dispatcher.client.Put(message)
+	}
 }

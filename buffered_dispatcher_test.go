@@ -8,7 +8,7 @@ import (
 
 type MockClient struct{}
 
-func (client *MockClient) Put(data [][]byte) bool {
+func (client *MockClient) Put(message []byte) bool {
 	return true
 }
 

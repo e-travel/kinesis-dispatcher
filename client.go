@@ -1,5 +1,5 @@
 package main
 
 type Client interface {
-	Put([][]byte) bool
+	Put([]byte) bool
 }

@@ -10,7 +10,7 @@ type KinesisClient struct {
 	session kinesisiface.KinesisAPI
 }
 
-func (client *KinesisClient) Put(data [][]byte) bool {
+func (client *KinesisClient) Put(message []byte) bool {
 	// TODO: implement functionality
 	return true
 }
