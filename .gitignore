@@ -1,2 +1,3 @@
 kinesis-dispatcher
 vendor
+*.out
