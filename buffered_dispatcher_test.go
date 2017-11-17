@@ -10,7 +10,7 @@ func TestPutPlacesMessageInQueue(t *testing.T) {
 	config := &Config{
 		bufferSize: 1,
 	}
-	dispatcher := NewKinesisDispatcher(config)
+	dispatcher := NewBufferedDispatcher(config, &KinesisClient{})
 	assert.True(t, dispatcher.Put([]byte("hello")))
 	assert.Equal(t, []byte("hello"), <-dispatcher.queue)
 }
@@ -19,7 +19,7 @@ func TestDropsMessageWhenQueueIsFull(t *testing.T) {
 	config := &Config{
 		bufferSize: 1,
 	}
-	dispatcher := NewKinesisDispatcher(config)
+	dispatcher := NewBufferedDispatcher(config, &KinesisClient{})
 	dispatcher.Put([]byte("hello"))
 	assert.False(t, dispatcher.Put([]byte("goodbye")))
 	assert.Equal(t, []byte("hello"), <-dispatcher.queue)
