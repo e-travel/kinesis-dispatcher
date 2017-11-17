@@ -7,8 +7,9 @@ type EchoDispatcher struct {
 }
 
 // prints the message to stdout
-func (dispatcher *EchoDispatcher) Put(message []byte) {
+func (dispatcher *EchoDispatcher) Put(message []byte) bool {
 	fmt.Println(string(message))
+	return true
 }
 
 // Does nothing

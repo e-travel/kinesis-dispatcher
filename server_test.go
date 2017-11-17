@@ -14,8 +14,9 @@ type MockDispatcher struct {
 	messages chan string
 }
 
-func (dispatcher *MockDispatcher) Put(message []byte) {
+func (dispatcher *MockDispatcher) Put(message []byte) bool {
 	dispatcher.messages <- string(message)
+	return true
 }
 
 func (dispatcher *MockDispatcher) Dispatch() {

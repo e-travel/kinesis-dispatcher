@@ -15,6 +15,7 @@ func RequestHandler(conn io.Reader, dispatcher Dispatcher) {
 		log.Print("Error reading from connection")
 		return
 	}
+	// TODO: do some logging here if Put returns false
 	dispatcher.Put(b)
 }
 

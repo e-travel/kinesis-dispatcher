@@ -13,12 +13,14 @@ func NewKinesisDispatcher(config *Config) *KinesisDispatcher {
 }
 
 // inserts the message into the buffer for dispatching
-func (dispatcher *KinesisDispatcher) Put(message []byte) {
+// returns true for successful insertion, false if message was dropped
+// will never block; if the queue is full, the message will be dropped
+func (dispatcher *KinesisDispatcher) Put(message []byte) bool {
 	select {
 	case dispatcher.queue <- message:
+		return true
 	default:
-		// do not block if channel is full
-		// this means we may drop messages
+		return false
 	}
 }
 
