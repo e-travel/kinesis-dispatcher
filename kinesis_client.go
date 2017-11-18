@@ -14,3 +14,6 @@ func (client *KinesisClient) Put(message []byte) bool {
 	// TODO: implement functionality
 	return true
 }
+
+func (client *KinesisClient) Dispatch() {
+}

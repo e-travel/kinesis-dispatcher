@@ -16,22 +16,22 @@ func main() {
 	if !config.Validate() {
 		log.Fatal(fmt.Sprintf("Invalid socket type (%s)", config.socketType))
 	}
-	var dispatcher Dispatcher
+	// choose the backend
+	var recipient Dispatcher
 	if config.echoMode {
-		fmt.Println("Mode: echo")
-		dispatcher = &EchoDispatcher{}
+		recipient = &EchoDispatcher{}
 	} else {
-		fmt.Println("Mode: kinesis")
 		sess := session.Must(session.NewSession(&aws.Config{
 			Retryer: client.DefaultRetryer{NumMaxRetries: 10},
 			Region:  aws.String("eu-west-1"),
 		}))
-		client := &KinesisClient{
+		recipient = &KinesisClient{
 			session: kinesis.New(sess),
 		}
-		dispatcher = NewBufferedDispatcher(config, client)
-		go dispatcher.Dispatch()
 	}
+	// create the intermediate buffer
+	buffer := NewMessageBuffer(config, recipient)
+	go buffer.Dispatch()
 	// setup a hook which will fire when the server is up and running
 	// currently used only in tests
 	running := make(chan bool)
@@ -39,5 +39,5 @@ func main() {
 		<-running
 	}()
 	// TODO: capture interrupt signals and stop server OR use Context
-	Serve(config, RequestHandler, dispatcher, running)
+	Serve(config, RequestHandler, buffer, running)
 }

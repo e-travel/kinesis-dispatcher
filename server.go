@@ -9,17 +9,17 @@ import (
 )
 
 // TODO: what if this function panics?
-func RequestHandler(conn io.Reader, dispatcher Dispatcher) {
+func RequestHandler(conn io.Reader, buffer Dispatcher) {
 	b, err := ioutil.ReadAll(conn)
 	if err != nil {
 		log.Print("Error reading from connection")
 		return
 	}
 	// TODO: do some logging here if Put returns false
-	dispatcher.Put(b)
+	buffer.Put(b)
 }
 
-func Serve(config *Config, handler func(io.Reader, Dispatcher), dispatcher Dispatcher, running chan<- bool) {
+func Serve(config *Config, handler func(io.Reader, Dispatcher), buffer Dispatcher, running chan<- bool) {
 
 	// remove any existing socket file
 	if config.socketType == "unix" {
@@ -38,7 +38,7 @@ func Serve(config *Config, handler func(io.Reader, Dispatcher), dispatcher Dispa
 			log.Fatal(err)
 		}
 		go func(conn net.Conn, handler func(io.Reader, Dispatcher)) {
-			handler(conn, dispatcher)
+			handler(conn, buffer)
 			conn.Close()
 		}(conn, handler)
 	}

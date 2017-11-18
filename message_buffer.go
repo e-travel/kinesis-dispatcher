@@ -1,23 +1,22 @@
 package main
 
-type BufferedDispatcher struct {
-	queue  chan []byte
-	client Client
+type MessageBuffer struct {
+	queue     chan []byte
+	recipient Dispatcher
 }
 
 // Creates and returns a new dispatcher
-func NewBufferedDispatcher(config *Config, client Client) *BufferedDispatcher {
-	dispatcher := &BufferedDispatcher{
-		queue:  make(chan []byte, config.bufferSize),
-		client: client,
+func NewMessageBuffer(config *Config, recipient Dispatcher) *MessageBuffer {
+	return &MessageBuffer{
+		queue:     make(chan []byte, config.bufferSize),
+		recipient: recipient,
 	}
-	return dispatcher
 }
 
 // inserts the message into the buffer for dispatching
 // returns true for successful insertion, false if message was dropped
 // will never block; if the queue is full, the message will be dropped
-func (dispatcher *BufferedDispatcher) Put(message []byte) bool {
+func (dispatcher *MessageBuffer) Put(message []byte) bool {
 	select {
 	case dispatcher.queue <- message:
 		return true
@@ -27,8 +26,8 @@ func (dispatcher *BufferedDispatcher) Put(message []byte) bool {
 }
 
 // fetches messages from the queue and dispatches to kinesis
-func (dispatcher *BufferedDispatcher) Dispatch() {
+func (dispatcher *MessageBuffer) Dispatch() {
 	for message := range dispatcher.queue {
-		dispatcher.client.Put(message)
+		dispatcher.recipient.Put(message)
 	}
 }
