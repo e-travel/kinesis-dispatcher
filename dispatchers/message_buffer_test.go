@@ -1,4 +1,4 @@
-package main
+package dispatchers
 
 import (
 	"testing"
@@ -7,31 +7,22 @@ import (
 )
 
 func TestPutPlacesMessageInQueue(t *testing.T) {
-	config := &Config{
-		bufferSize: 1,
-	}
-	dispatcher := NewMessageBuffer(config, &MockDispatcher{})
+	dispatcher := NewMessageBuffer(1, &MockDispatcher{})
 	assert.True(t, dispatcher.Put([]byte("hello")))
 	assert.Equal(t, []byte("hello"), <-dispatcher.queue)
 }
 
 func TestPutDropsMessageWhenQueueIsFull(t *testing.T) {
-	config := &Config{
-		bufferSize: 1,
-	}
-	dispatcher := NewMessageBuffer(config, &MockDispatcher{})
+	dispatcher := NewMessageBuffer(1, &MockDispatcher{})
 	dispatcher.Put([]byte("hello"))
 	assert.False(t, dispatcher.Put([]byte("goodbye")))
 	assert.Equal(t, []byte("hello"), <-dispatcher.queue)
 }
 
 func TestDispatchWillForwardTheMessage(t *testing.T) {
-	config := &Config{
-		bufferSize: 1,
-	}
-	mockRecipient := NewMockDispatcher(1)
-	dispatcher := NewMessageBuffer(config, mockRecipient)
+	mockRecipient := &MockDispatcher{Messages: make(chan string)}
+	dispatcher := NewMessageBuffer(1, mockRecipient)
 	assert.True(t, dispatcher.Put([]byte("Hello There")))
 	go dispatcher.Dispatch()
-	assert.Equal(t, "Hello There", <-mockRecipient.messages)
+	assert.Equal(t, "Hello There", <-mockRecipient.Messages)
 }

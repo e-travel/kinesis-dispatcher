@@ -1,4 +1,4 @@
-package main
+package dispatchers
 
 type MessageBuffer struct {
 	queue     chan []byte
@@ -6,9 +6,9 @@ type MessageBuffer struct {
 }
 
 // Creates and returns a new dispatcher
-func NewMessageBuffer(config *Config, recipient Dispatcher) *MessageBuffer {
+func NewMessageBuffer(bufferSize int, recipient Dispatcher) *MessageBuffer {
 	return &MessageBuffer{
-		queue:     make(chan []byte, config.bufferSize),
+		queue:     make(chan []byte, bufferSize),
 		recipient: recipient,
 	}
 }
@@ -25,7 +25,7 @@ func (dispatcher *MessageBuffer) Put(message []byte) bool {
 	}
 }
 
-// fetches messages from the queue and dispatches to kinesis
+// fetches messages from the queue and dispatches to recipient
 func (dispatcher *MessageBuffer) Dispatch() {
 	for message := range dispatcher.queue {
 		dispatcher.recipient.Put(message)

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/e-travel/message-dispatcher/dispatchers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,8 +26,8 @@ func TestUnixSocketServerWillAcceptMessage(t *testing.T) {
 		socketType:    "unix",
 		socketAddress: "/tmp/TestUnixSocketServerWillAcceptMessage.sock",
 	}
-	recipient := &MockDispatcher{messages: make(chan string)}
-	buffer := NewMessageBuffer(config, recipient)
+	recipient := &dispatchers.MockDispatcher{Messages: make(chan string)}
+	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)
 	go buffer.Dispatch()
 	running := make(chan bool)
 	// start server
@@ -37,7 +38,7 @@ func TestUnixSocketServerWillAcceptMessage(t *testing.T) {
 	err := DoRequest(config, "hello there")
 	// check
 	assert.Nil(t, err)
-	assert.Equal(t, "hello there", <-recipient.messages)
+	assert.Equal(t, "hello there", <-recipient.Messages)
 }
 
 func TestTCPSocketServerWillAcceptMessage(t *testing.T) {
@@ -46,8 +47,8 @@ func TestTCPSocketServerWillAcceptMessage(t *testing.T) {
 		socketType:    "tcp",
 		socketAddress: "127.0.0.1:7778",
 	}
-	recipient := &MockDispatcher{messages: make(chan string)}
-	buffer := NewMessageBuffer(config, recipient)
+	recipient := &dispatchers.MockDispatcher{Messages: make(chan string)}
+	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)
 	go buffer.Dispatch()
 	running := make(chan bool)
 	// start server
@@ -57,5 +58,5 @@ func TestTCPSocketServerWillAcceptMessage(t *testing.T) {
 	err := DoRequest(config, "hello there")
 	// check
 	assert.Nil(t, err)
-	assert.Equal(t, "hello there", <-recipient.messages)
+	assert.Equal(t, "hello there", <-recipient.Messages)
 }

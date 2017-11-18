@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
+	"github.com/e-travel/message-dispatcher/dispatchers"
 )
 
 func main() {
@@ -17,20 +18,20 @@ func main() {
 		log.Fatal(fmt.Sprintf("Invalid socket type (%s)", config.socketType))
 	}
 	// choose the backend
-	var recipient Dispatcher
+	var recipient dispatchers.Dispatcher
 	if config.echoMode {
-		recipient = &EchoDispatcher{}
+		recipient = &dispatchers.Echo{}
 	} else {
 		sess := session.Must(session.NewSession(&aws.Config{
 			Retryer: client.DefaultRetryer{NumMaxRetries: 10},
 			Region:  aws.String("eu-west-1"),
 		}))
-		recipient = &KinesisClient{
-			session: kinesis.New(sess),
+		recipient = &dispatchers.Kinesis{
+			Session: kinesis.New(sess),
 		}
 	}
 	// create the intermediate buffer
-	buffer := NewMessageBuffer(config, recipient)
+	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)
 	go buffer.Dispatch()
 	// setup a hook which will fire when the server is up and running
 	// currently used only in tests

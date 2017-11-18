@@ -6,10 +6,12 @@ import (
 	"log"
 	"net"
 	"os"
+
+	"github.com/e-travel/message-dispatcher/dispatchers"
 )
 
 // TODO: what if this function panics?
-func RequestHandler(conn io.Reader, buffer Dispatcher) {
+func RequestHandler(conn io.Reader, buffer dispatchers.Dispatcher) {
 	b, err := ioutil.ReadAll(conn)
 	if err != nil {
 		log.Print("Error reading from connection")
@@ -19,7 +21,7 @@ func RequestHandler(conn io.Reader, buffer Dispatcher) {
 	buffer.Put(b)
 }
 
-func Serve(config *Config, handler func(io.Reader, Dispatcher), buffer Dispatcher, running chan<- bool) {
+func Serve(config *Config, handler func(io.Reader, dispatchers.Dispatcher), buffer dispatchers.Dispatcher, running chan<- bool) {
 
 	// remove any existing socket file
 	if config.socketType == "unix" {
@@ -37,7 +39,7 @@ func Serve(config *Config, handler func(io.Reader, Dispatcher), buffer Dispatche
 		if err != nil {
 			log.Fatal(err)
 		}
-		go func(conn net.Conn, handler func(io.Reader, Dispatcher)) {
+		go func(conn net.Conn, handler func(io.Reader, dispatchers.Dispatcher)) {
 			handler(conn, buffer)
 			conn.Close()
 		}(conn, handler)
