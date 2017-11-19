@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"os"
+
+	"github.com/e-travel/message-dispatcher/servers"
 )
 
 type Config struct {
@@ -12,8 +14,14 @@ type Config struct {
 	echoMode      bool
 }
 
+var ValidSocketTypes = map[string]bool{
+	servers.TCP:      true,
+	servers.UNIX:     true,
+	servers.UNIXGRAM: true,
+}
+
 func ParseFromCommandLine(config *Config) {
-	flag.StringVar(&config.socketType, "type", "tcp", "The socket's type (tcp or unix)")
+	flag.StringVar(&config.socketType, "type", servers.UNIXGRAM, "The socket's type (tcp, unix, unixgram)")
 	flag.StringVar(&config.socketAddress, "address", ":8888", "The socket's address (port or file)")
 	flag.IntVar(&config.bufferSize, "size", 1024, "The size of the buffer")
 	flag.BoolVar(&config.echoMode, "echo", false, "Activate echo mode (no kinesis requests)")
@@ -29,7 +37,7 @@ func ParseFromCommandLine(config *Config) {
 
 func (config *Config) Validate() bool {
 	// validate
-	if config.socketType != "tcp" && config.socketType != "unix" {
+	if !ValidSocketTypes[config.socketType] {
 		return false
 	}
 	return true

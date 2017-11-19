@@ -10,7 +10,7 @@ def send_message(type, content)
   socket =
     case type
     when 'unix'
-      UNIXSocket.new '/tmp/kinesis-dispatcher.sock'
+      UNIXSocket.new '/tmp/message-dispatcher.sock'
     when 'tcp'
       TCPSocket.new 'localhost', 8888
     else

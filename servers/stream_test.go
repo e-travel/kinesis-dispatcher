@@ -1,4 +1,4 @@
-package main
+package servers
 
 import (
 	"io"
@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func DoRequest(config *Config, message string) error {
-	conn, err := net.Dial(config.socketType, config.socketAddress)
+func DoRequest(server *Stream, message string) error {
+	conn, err := net.Dial(server.Type, server.Address)
 	if err == nil {
 		io.Copy(conn, strings.NewReader(message))
 		conn.Close()
@@ -22,20 +22,20 @@ func DoRequest(config *Config, message string) error {
 
 func TestUnixSocketServerWillAcceptMessage(t *testing.T) {
 	// setup
-	config := &Config{
-		socketType:    "unix",
-		socketAddress: "/tmp/TestUnixSocketServerWillAcceptMessage.sock",
-	}
 	recipient := &dispatchers.MockDispatcher{Messages: make(chan string)}
-	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)
+	buffer := dispatchers.NewMessageBuffer(1, recipient)
 	go buffer.Dispatch()
 	running := make(chan bool)
 	// start server
-	go Serve(config, RequestHandler, buffer, running)
-	defer os.Remove(config.socketAddress)
+	server := &Stream{
+		Type:    "unix",
+		Address: "/tmp/TestUnixSocketServerWillAcceptMessage.sock",
+	}
+	go server.Serve(buffer, running)
+	defer os.Remove(server.Address)
 	<-running
 	// fire
-	err := DoRequest(config, "hello there")
+	err := DoRequest(server, "hello there")
 	// check
 	assert.Nil(t, err)
 	assert.Equal(t, "hello there", <-recipient.Messages)
@@ -43,19 +43,19 @@ func TestUnixSocketServerWillAcceptMessage(t *testing.T) {
 
 func TestTCPSocketServerWillAcceptMessage(t *testing.T) {
 	// setup
-	config := &Config{
-		socketType:    "tcp",
-		socketAddress: "127.0.0.1:7778",
-	}
 	recipient := &dispatchers.MockDispatcher{Messages: make(chan string)}
-	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)
+	buffer := dispatchers.NewMessageBuffer(1, recipient)
 	go buffer.Dispatch()
 	running := make(chan bool)
 	// start server
-	go Serve(config, RequestHandler, buffer, running)
+	server := &Stream{
+		Type:    "tcp",
+		Address: "127.0.0.1:7778",
+	}
+	go server.Serve(buffer, running)
 	<-running
 	// fire
-	err := DoRequest(config, "hello there")
+	err := DoRequest(server, "hello there")
 	// check
 	assert.Nil(t, err)
 	assert.Equal(t, "hello there", <-recipient.Messages)

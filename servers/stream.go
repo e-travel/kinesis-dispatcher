@@ -1,7 +1,6 @@
-package main
+package servers
 
 import (
-	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -10,8 +9,14 @@ import (
 	"github.com/e-travel/message-dispatcher/dispatchers"
 )
 
+type Stream struct {
+	Type    string
+	Address string
+}
+
 // TODO: what if this function panics?
-func RequestHandler(conn io.Reader, buffer dispatchers.Dispatcher) {
+func HandleStream(conn net.Conn, buffer dispatchers.Dispatcher) {
+	defer conn.Close()
 	b, err := ioutil.ReadAll(conn)
 	if err != nil {
 		log.Print("Error reading from connection")
@@ -21,13 +26,12 @@ func RequestHandler(conn io.Reader, buffer dispatchers.Dispatcher) {
 	buffer.Put(b)
 }
 
-func Serve(config *Config, handler func(io.Reader, dispatchers.Dispatcher), buffer dispatchers.Dispatcher, running chan<- bool) {
-
+func (server *Stream) Serve(buffer dispatchers.Dispatcher, running chan<- bool) {
 	// remove any existing socket file
-	if config.socketType == "unix" {
-		os.Remove(config.socketAddress)
+	if server.Type == "unix" {
+		os.Remove(server.Address)
 	}
-	listener, err := net.Listen(config.socketType, config.socketAddress)
+	listener, err := net.Listen(server.Type, server.Address)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,9 +43,6 @@ func Serve(config *Config, handler func(io.Reader, dispatchers.Dispatcher), buff
 		if err != nil {
 			log.Fatal(err)
 		}
-		go func(conn net.Conn, handler func(io.Reader, dispatchers.Dispatcher)) {
-			handler(conn, buffer)
-			conn.Close()
-		}(conn, handler)
+		go HandleStream(conn, buffer)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/e-travel/message-dispatcher/dispatchers"
+	"github.com/e-travel/message-dispatcher/servers"
 )
 
 func main() {
@@ -40,5 +41,6 @@ func main() {
 		<-running
 	}()
 	// TODO: capture interrupt signals and stop server OR use Context
-	Serve(config, RequestHandler, buffer, running)
+	server := servers.CreateServer(config.socketType, config.socketAddress)
+	server.Serve(buffer, running)
 }
