@@ -8,9 +8,9 @@ The purpose of this program is to act as a server for receiving
 application data and forwarding them to a recipient backend (e.g. AWS
 Kinesis). Supported servers include:
 
-    * unix domain socket (stream)
-    * tcp socket (stream)
-    * unix datagram socket (datagram)
+* unix domain socket (stream)
+* tcp socket (stream)
+* unix datagram socket (datagram)
 
 Emphasis is given to performance and non-blocking client requests.
 
