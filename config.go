@@ -10,6 +10,7 @@ import (
 type Config struct {
 	socketType    string
 	socketAddress string
+	streamName    string
 	bufferSize    int
 	echoMode      bool
 }
@@ -23,6 +24,7 @@ var ValidSocketTypes = map[string]bool{
 func ParseFromCommandLine(config *Config) {
 	flag.StringVar(&config.socketType, "type", servers.UNIXGRAM, "The socket's type (tcp, unix, unixgram)")
 	flag.StringVar(&config.socketAddress, "address", ":8888", "The socket's address (port or file)")
+	flag.StringVar(&config.streamName, "streamName", "", "The name of the kinesis stream")
 	flag.IntVar(&config.bufferSize, "size", 1024, "The size of the buffer")
 	flag.BoolVar(&config.echoMode, "echo", false, "Activate echo mode (no kinesis requests)")
 	helpRequested := flag.Bool("help", false, "Print usage help and exit")
@@ -36,9 +38,14 @@ func ParseFromCommandLine(config *Config) {
 }
 
 func (config *Config) Validate() bool {
-	// validate
-	if !ValidSocketTypes[config.socketType] {
-		return false
-	}
-	return true
+	return validateSocketType(config.socketType) &&
+		validateStreamName(config.streamName)
+}
+
+func validateSocketType(socketType string) bool {
+	return ValidSocketTypes[socketType]
+}
+
+func validateStreamName(streamName string) bool {
+	return len(streamName) > 0
 }
