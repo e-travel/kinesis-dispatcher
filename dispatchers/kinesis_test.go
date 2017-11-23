@@ -79,12 +79,15 @@ func TestKinesisProcessMessageQueueWillNotBlockWhenEnqueingBatch(t *testing.T) {
 }
 
 func TestKinesisProcessBatchQueueWillPostToKinesis(t *testing.T) {
+	t.Skip("TODO")
 }
 
 func TestKinesisProcessBatchQueueWillLogOnError(t *testing.T) {
+	t.Skip("TODO")
 }
 
 func TestKinesisProcessBatchQueueWillLogOnFailedRecords(t *testing.T) {
+	t.Skip("TODO")
 }
 
 func TestIsBatchReady(t *testing.T) {
