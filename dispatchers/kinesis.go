@@ -90,7 +90,6 @@ func (dispatcher *Kinesis) processMessageQueue() {
 
 func (dispatcher *Kinesis) processBatchQueue() {
 	for batch := range dispatcher.batchQueue {
-		fmt.Println("We shouldn't be here")
 		if output, err := dispatcher.service.PutRecords(batch); err != nil {
 			fmt.Printf("error when posting to kinesis: %s\n", err.Error())
 			if *output.FailedRecordCount > 0 {

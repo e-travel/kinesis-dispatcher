@@ -20,6 +20,7 @@ func main() {
 		recipient = &dispatchers.Echo{}
 	} else {
 		recipient = dispatchers.NewKinesis(config.streamName)
+		go recipient.Dispatch()
 	}
 	// create the intermediate buffer
 	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)
