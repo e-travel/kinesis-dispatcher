@@ -20,6 +20,7 @@ const awsRegion string = "eu-west-1"
 const KinesisMaxNumberOfRecords = 500
 const KinesisMaxSizeInBytes = 5 * MEGABYTE
 const KinesisBufferSize = 2 * KinesisMaxNumberOfRecords
+const KinesisPartitionKeyMaxSize = 256
 
 type Kinesis struct {
 	service      kinesisiface.KinesisAPI
@@ -78,7 +79,7 @@ func (dispatcher *Kinesis) processMessageQueue() {
 		}
 		entry := &kinesis.PutRecordsRequestEntry{
 			Data:         message,
-			PartitionKey: aws.String("TODO: Change me"),
+			PartitionKey: aws.String(generatePartitionKey(message)),
 		}
 		batch.Records[messageIndex] = entry
 		// update counters
@@ -108,6 +109,15 @@ func newBatch(streamName string) *kinesis.PutRecordsInput {
 }
 
 func isBatchReady(messageLength int, recordsLength int, byteCount int) bool {
+	// TODO: add some timer to the condition
 	return byteCount+messageLength >= KinesisMaxSizeInBytes ||
 		recordsLength == KinesisMaxNumberOfRecords
+}
+
+func generatePartitionKey(message []byte) string {
+	r := []rune(string(message))
+	if len(r) > KinesisPartitionKeyMaxSize {
+		r = r[:KinesisPartitionKeyMaxSize]
+	}
+	return string(r)
 }

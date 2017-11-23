@@ -1,6 +1,7 @@
 package dispatchers
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -107,5 +108,29 @@ func TestIsBatchReady(t *testing.T) {
 	for _, testCase := range testCases {
 		actuallyReady := isBatchReady(testCase.ml, testCase.rs, testCase.bc)
 		assert.Equal(t, testCase.ready, actuallyReady)
+	}
+}
+
+func TestGeneratePartitionKey(t *testing.T) {
+	var testCases = []struct {
+		message []byte
+		key     string
+	}{
+		{
+			[]byte("a"),
+			"a",
+		},
+		{
+			[]byte(strings.Repeat("a", KinesisPartitionKeyMaxSize)),
+			strings.Repeat("a", KinesisPartitionKeyMaxSize),
+		},
+		{
+			[]byte(strings.Repeat("a", KinesisPartitionKeyMaxSize+1)),
+			strings.Repeat("a", KinesisPartitionKeyMaxSize),
+		},
+	}
+
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.key, generatePartitionKey(testCase.message))
 	}
 }
