@@ -4,10 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/e-travel/message-dispatcher/dispatchers"
 	"github.com/e-travel/message-dispatcher/servers"
 )
@@ -23,13 +19,7 @@ func main() {
 	if config.echoMode {
 		recipient = &dispatchers.Echo{}
 	} else {
-		sess := session.Must(session.NewSession(&aws.Config{
-			Retryer: client.DefaultRetryer{NumMaxRetries: 10},
-			Region:  aws.String("eu-west-1"),
-		}))
-		recipient = &dispatchers.Kinesis{
-			Session: kinesis.New(sess),
-		}
+		recipient = dispatchers.NewKinesis(config.streamName)
 	}
 	// create the intermediate buffer
 	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)
