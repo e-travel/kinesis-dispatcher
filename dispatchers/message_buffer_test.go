@@ -12,6 +12,12 @@ func TestMessageBufferPutPlacesMessageInQueue(t *testing.T) {
 	assert.Equal(t, []byte("hello"), <-dispatcher.queue)
 }
 
+func TestMessageBufferPutIgnoresEmptyMessage(t *testing.T) {
+	dispatcher := NewMessageBuffer(1, &MockDispatcher{})
+	assert.False(t, dispatcher.Put([]byte("")))
+	assert.Empty(t, dispatcher.queue)
+}
+
 func TestMessageBufferPutDropsMessageWhenQueueIsFull(t *testing.T) {
 	dispatcher := NewMessageBuffer(1, &MockDispatcher{})
 	dispatcher.Put([]byte("hello"))

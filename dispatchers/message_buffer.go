@@ -17,6 +17,9 @@ func NewMessageBuffer(bufferSize int, recipient Dispatcher) *MessageBuffer {
 // returns true for successful insertion, false if message was dropped
 // will never block; if the queue is full, the message will be dropped
 func (dispatcher *MessageBuffer) Put(message []byte) bool {
+	if len(message) == 0 {
+		return false
+	}
 	select {
 	case dispatcher.queue <- message:
 		return true
