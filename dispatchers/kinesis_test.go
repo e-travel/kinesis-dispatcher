@@ -5,13 +5,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/kinesis"
 	"github.com/stretchr/testify/assert"
 )
 
+func sendMessage(dispatcher *Kinesis, messageContent string) {
+	dispatcher.Put([]byte(messageContent))
+}
+
 func fillMessageBuffer(dispatcher *Kinesis, messageContent string) {
 	for i := 0; i < KinesisMaxNumberOfRecords; i++ {
-		dispatcher.Put([]byte(messageContent))
+		sendMessage(dispatcher, messageContent)
 	}
 }
 
@@ -39,6 +42,7 @@ func TestKinesisPutMessageWhenQueueIsFull(t *testing.T) {
 func TestKinesisDispatchWillProcessAllQueues(t *testing.T) {
 	dispatcher := NewKinesis("stream_name")
 	fillMessageBuffer(dispatcher, "hello")
+	sendMessage(dispatcher, "hello")
 	go dispatcher.Dispatch()
 	// drain sink
 	timer := time.NewTimer(time.Second)
@@ -52,31 +56,16 @@ func TestKinesisDispatchWillProcessAllQueues(t *testing.T) {
 }
 
 func TestKinesisProcessMessageQueueWillAssembleBatchAndPutInBatchQueue(t *testing.T) {
+	//t.Skip("This blocks; needs fixing")
 	dispatcher := NewKinesis("stream_name")
 	go dispatcher.processMessageQueue()
 	// create a batch by filling the buffer
 	fillMessageBuffer(dispatcher, "The same message all over again")
+	// send one more message to trigger batch creation
+	sendMessage(dispatcher, "This will stay in the queue")
 	// get the batch
 	batch := <-dispatcher.batchQueue
 	assert.Equal(t, KinesisMaxNumberOfRecords, len(batch.Records))
-	assert.Empty(t, dispatcher.messageQueue)
-}
-
-func TestKinesisProcessMessageQueueWillNotBlockWhenEnqueingBatch(t *testing.T) {
-	dispatcher := NewKinesis("stream_name")
-	// downsize the batch queue
-	dispatcher.batchQueue = make(chan *kinesis.PutRecordsInput, 1)
-	// create two batches
-	fillMessageBuffer(dispatcher, "The same message all over again")
-	fillMessageBuffer(dispatcher, "Another message all over again")
-	close(dispatcher.messageQueue)
-	// TODO: the success of this test depends on the following statement not blocking
-	// this is not a good practice since the whole test suite may block
-	// we need to add Context in Dispatch (and the process*Queue methods)
-	dispatcher.processMessageQueue()
-	<-dispatcher.batchQueue
-	// no batch is left to process
-	assert.Empty(t, dispatcher.batchQueue)
 }
 
 func TestKinesisProcessBatchQueueWillPostToKinesis(t *testing.T) {
@@ -93,7 +82,7 @@ func TestKinesisProcessBatchQueueWillLogOnFailedRecords(t *testing.T) {
 
 func TestIsBatchReady(t *testing.T) {
 	var testCases = []struct {
-		rs    int // records size
+		rl    int // records length
 		bc    int // byte count
 		ml    int // message length
 		ready bool
@@ -110,7 +99,7 @@ func TestIsBatchReady(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		actuallyReady := isBatchReady(testCase.ml, testCase.rs, testCase.bc)
+		actuallyReady := isBatchReady(testCase.rl, testCase.ml, testCase.bc)
 		assert.Equal(t, testCase.ready, actuallyReady)
 	}
 }
@@ -121,8 +110,8 @@ func TestGeneratePartitionKey(t *testing.T) {
 		key     string
 	}{
 		{
-			[]byte("a"),
-			"a",
+			[]byte("/{-_α"),
+			"/{-_α",
 		},
 		{
 			[]byte(strings.Repeat("a", KinesisPartitionKeyMaxSize)),

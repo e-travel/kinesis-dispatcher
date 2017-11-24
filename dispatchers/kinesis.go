@@ -14,7 +14,7 @@ import (
 
 const MEGABYTE = 1024 * 1024
 
-// TODO: make these configurable
+// TODO: make aws region configurable
 const awsRegion string = "eu-west-1"
 
 const KinesisMaxNumberOfRecords = 500
@@ -58,41 +58,38 @@ func (dispatcher *Kinesis) Dispatch() {
 }
 
 func (dispatcher *Kinesis) processMessageQueue() {
-	messageIndex := 0
+	batch := newBatch(dispatcher.streamName)
 	byteCount := 0
 
-	batch := newBatch(dispatcher.streamName)
-
 	for message := range dispatcher.messageQueue {
-		// is the batch ready?
-		if isBatchReady(len(message), messageIndex+1, byteCount) {
-			// enqueue the batch without blocking
+		if isBatchReady(len(batch.Records), len(message), byteCount) {
 			select {
 			case dispatcher.batchQueue <- batch:
 			default:
 			}
-			// reset batch
 			batch = newBatch(dispatcher.streamName)
-			// reset counters
-			messageIndex = 0
 			byteCount = 0
 		}
 		entry := &kinesis.PutRecordsRequestEntry{
 			Data:         message,
 			PartitionKey: aws.String(generatePartitionKey(message)),
 		}
-		batch.Records[messageIndex] = entry
-		// update counters
+		// TODO: validate that the individual entry size is not above 1MB
+		batch.Records = append(batch.Records, entry)
 		byteCount += len(entry.Data) + len([]byte(*entry.PartitionKey))
-		messageIndex++
 	}
 }
 
 func (dispatcher *Kinesis) processBatchQueue() {
 	for batch := range dispatcher.batchQueue {
+		// fmt.Println(batch) TODO: for log.Debug
 		if output, err := dispatcher.service.PutRecords(batch); err != nil {
 			fmt.Printf("error when posting to kinesis: %s\n", err.Error())
 		} else {
+			// TODO: for log.Debug
+			// for _, record := range output.Records {
+			// 	fmt.Println(record)
+			// }
 			if *output.FailedRecordCount > 0 {
 				fmt.Printf("AWS Kinesis: failed records %d/%d",
 					*output.FailedRecordCount, len(batch.Records))
@@ -103,15 +100,15 @@ func (dispatcher *Kinesis) processBatchQueue() {
 
 func newBatch(streamName string) *kinesis.PutRecordsInput {
 	return &kinesis.PutRecordsInput{
-		Records:    make([]*kinesis.PutRecordsRequestEntry, KinesisMaxNumberOfRecords),
+		Records:    make([]*kinesis.PutRecordsRequestEntry, 0, KinesisMaxNumberOfRecords),
 		StreamName: aws.String(streamName),
 	}
 }
 
-func isBatchReady(messageLength int, recordsLength int, byteCount int) bool {
+func isBatchReady(recordsLength int, messageLength int, byteCount int) bool {
 	// TODO: add some timer to the condition
-	return byteCount+messageLength >= KinesisMaxSizeInBytes ||
-		recordsLength == KinesisMaxNumberOfRecords
+	return recordsLength == KinesisMaxNumberOfRecords ||
+		byteCount+messageLength >= KinesisMaxSizeInBytes
 }
 
 func generatePartitionKey(message []byte) string {
