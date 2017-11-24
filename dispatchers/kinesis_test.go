@@ -99,10 +99,14 @@ func TestIsBatchReady(t *testing.T) {
 		ready bool
 	}{
 		{0, 0, 10, false},
-		{400, 1 * MEGABYTE, 100, false},
-		{500, 1 * MEGABYTE, 100, true},
-		{400, 5*MEGABYTE - 1, 0, false},
-		{400, 5*MEGABYTE - 1, 1, true},
+		// no difference
+		{KinesisMaxNumberOfRecords - 1, KinesisMaxSizeInBytes - 1, 0, false},
+		// max number of records makes the difference
+		{KinesisMaxNumberOfRecords, KinesisMaxSizeInBytes - 1, 0, true},
+		// max size in bytes make the difference (due to message length)
+		{KinesisMaxNumberOfRecords - 1, KinesisMaxSizeInBytes - 1, 1, true},
+		// both max number of records and max size in byte make the difference
+		{KinesisMaxNumberOfRecords, KinesisMaxSizeInBytes, 1, true},
 	}
 
 	for _, testCase := range testCases {

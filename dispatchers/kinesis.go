@@ -92,6 +92,7 @@ func (dispatcher *Kinesis) processBatchQueue() {
 	for batch := range dispatcher.batchQueue {
 		if output, err := dispatcher.service.PutRecords(batch); err != nil {
 			fmt.Printf("error when posting to kinesis: %s\n", err.Error())
+		} else {
 			if *output.FailedRecordCount > 0 {
 				fmt.Printf("AWS Kinesis: failed records %d/%d",
 					*output.FailedRecordCount, len(batch.Records))
