@@ -38,8 +38,14 @@ func ParseFromCommandLine(config *Config) {
 }
 
 func (config *Config) Validate() bool {
-	return validateSocketType(config.socketType) &&
-		validateStreamName(config.streamName)
+	switch {
+	case !validateSocketType(config.socketType):
+		return false
+	case !config.echoMode && !validateStreamName(config.streamName):
+		return false
+	default:
+		return true
+	}
 }
 
 func validateSocketType(socketType string) bool {

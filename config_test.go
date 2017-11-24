@@ -6,6 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestValidate(t *testing.T) {
+	// test the aggregate validation
+	t.Skip("TODO")
+}
+
 func TestSocketTypeValidation(t *testing.T) {
 	var testCases = []struct {
 		value string
