@@ -1,13 +1,19 @@
 require 'socket'
 
-class UnixDatagramClient
+socket_address = ARGV.last || '/tmp/my.sock'
+puts "set address=#{socket_address}"
 
-  def initialize
+class UnixDatagramClient
+  def initialize(address)
     @socket = Socket.new Socket::PF_UNIX, Socket::SOCK_DGRAM
+    @address = address.strip
   end
 
   def connect
-    @socket.connect Socket.sockaddr_un("/tmp/datagram.sock")
+    @socket.connect Socket.sockaddr_un(@address)
+  rescue
+    puts "Failed to connect to #{@address}. Aborting."
+    exit 1
   end
 
   # see http://www.rubydoc.info/stdlib/socket/1.9.3/Socket/Constants
@@ -16,9 +22,15 @@ class UnixDatagramClient
   end
 end
 
-client = UnixDatagramClient.new
+client = UnixDatagramClient.new socket_address
 client.connect
 
+puts "Enter messages:"
 while message = gets
-  client.send_message(message.strip)
+  begin
+    client.send_message(message.strip)
+  rescue
+    puts "Send Failed. Reconnecting..."
+    client.connect
+  end
 end
