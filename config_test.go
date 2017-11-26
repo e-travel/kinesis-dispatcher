@@ -6,11 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestValidate(t *testing.T) {
-	// test the aggregate validation
-	t.Skip("TODO")
-}
-
 func TestSocketTypeValidation(t *testing.T) {
 	var testCases = []struct {
 		value string
@@ -30,16 +25,23 @@ func TestSocketTypeValidation(t *testing.T) {
 	}
 }
 
+func TestProducerTypeMapping(t *testing.T) {
+	t.Skip("TODO: are values correctly mapped?")
+}
+
 func TestStreamNameValidation(t *testing.T) {
 	var testCases = []struct {
-		value string
-		valid bool
+		streamName     string
+		dispatcherType string
+		valid          bool
 	}{
-		{"", false},
-		{"a_name", true},
+		{"", "kinesis", false},
+		{"", "echo", true},
+		{"a_name", "kinesis", true},
 	}
 
 	for _, testCase := range testCases {
-		assert.Equal(t, testCase.valid, validateStreamName(testCase.value))
+		assert.Equal(t, testCase.valid,
+			validateStreamName(testCase.streamName, testCase.dispatcherType))
 	}
 }

@@ -16,11 +16,14 @@ func main() {
 	}
 	// choose the backend
 	var recipient dispatchers.Dispatcher
-	if config.echoMode {
+	switch config.dispatcherType {
+	case "echo":
 		recipient = &dispatchers.Echo{}
-	} else {
+	case "kinesis":
 		recipient = dispatchers.NewKinesis(config.streamName)
 		go recipient.Dispatch()
+	default:
+		log.Fatal(fmt.Sprintf("Invalid dispatcher type (%s)", config.dispatcherType))
 	}
 	// create the intermediate buffer
 	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)
