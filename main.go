@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/e-travel/message-dispatcher/dispatchers"
 	"github.com/e-travel/message-dispatcher/servers"
@@ -12,7 +11,7 @@ func main() {
 	config := &Config{}
 	ParseFromCommandLine(config)
 	if !config.Validate() {
-		log.Fatal(fmt.Sprintf("Invalid socket type (%s)", config.socketType))
+		log.Fatalf("Invalid socket type (%s)", config.socketType)
 	}
 	// choose the backend
 	var recipient dispatchers.Dispatcher
@@ -23,7 +22,7 @@ func main() {
 		recipient = dispatchers.NewKinesis(config.streamName)
 		go recipient.Dispatch()
 	default:
-		log.Fatal(fmt.Sprintf("Invalid dispatcher type (%s)", config.dispatcherType))
+		log.Fatalf("Invalid dispatcher type (%s)", config.dispatcherType)
 	}
 	// create the intermediate buffer
 	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)

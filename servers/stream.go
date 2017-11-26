@@ -2,9 +2,10 @@ package servers
 
 import (
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/e-travel/message-dispatcher/dispatchers"
 )
@@ -19,7 +20,7 @@ func HandleStream(conn net.Conn, buffer dispatchers.Dispatcher) {
 	defer conn.Close()
 	b, err := ioutil.ReadAll(conn)
 	if err != nil {
-		log.Print("Error reading from connection")
+		log.Error("Error reading from connection")
 		return
 	}
 	// TODO: do some logging here if Put returns false

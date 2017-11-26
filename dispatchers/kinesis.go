@@ -3,7 +3,7 @@ package dispatchers
 // this is a stub struct for the moment
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -82,16 +82,15 @@ func (dispatcher *Kinesis) processMessageQueue() {
 
 func (dispatcher *Kinesis) processBatchQueue() {
 	for batch := range dispatcher.batchQueue {
-		// fmt.Println(batch) TODO: for log.Debug
 		if output, err := dispatcher.service.PutRecords(batch); err != nil {
-			fmt.Printf("error when posting to kinesis: %s\n", err.Error())
+			log.Error("error when posting to kinesis: %s\n", err.Error())
 		} else {
 			// TODO: for log.Debug
 			// for _, record := range output.Records {
 			// 	fmt.Println(record)
 			// }
 			if *output.FailedRecordCount > 0 {
-				fmt.Printf("AWS Kinesis: failed records %d/%d",
+				log.Warning("AWS Kinesis: failed records %d/%d",
 					*output.FailedRecordCount, len(batch.Records))
 			}
 		}

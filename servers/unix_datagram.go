@@ -1,9 +1,10 @@
 package servers
 
 import (
-	"log"
 	"net"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/e-travel/message-dispatcher/dispatchers"
 )
