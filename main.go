@@ -1,11 +1,29 @@
 package main
 
 import (
+	"errors"
+	"fmt"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/e-travel/message-dispatcher/dispatchers"
 	"github.com/e-travel/message-dispatcher/servers"
 )
+
+func createDispatcher(name string) (dispatchers.Dispatcher, error) {
+	// choose the backend
+	var dispatcher dispatchers.Dispatcher
+	var err error
+	switch name {
+	case "echo":
+		dispatcher = &dispatchers.Echo{}
+	case "kinesis":
+		dispatcher = dispatchers.NewKinesis(name)
+	default:
+		err = errors.New(fmt.Sprintf("Invalid dispatcher type: %s", name))
+	}
+	return dispatcher, err
+}
 
 func main() {
 	config := &Config{}
@@ -13,19 +31,16 @@ func main() {
 	if !config.Validate() {
 		log.Fatalf("Invalid socket type (%s)", config.socketType)
 	}
-	// choose the backend
-	var recipient dispatchers.Dispatcher
-	switch config.dispatcherType {
-	case "echo":
-		recipient = &dispatchers.Echo{}
-	case "kinesis":
-		recipient = dispatchers.NewKinesis(config.streamName)
-		go recipient.Dispatch()
-	default:
-		log.Fatalf("Invalid dispatcher type (%s)", config.dispatcherType)
+	// create the dispatcher (backend)
+	dispatcher, err := createDispatcher(config.dispatcherType)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
+	// start the worker
+	go dispatcher.Dispatch()
 	// create the intermediate buffer
-	buffer := dispatchers.NewMessageBuffer(config.bufferSize, recipient)
+	buffer := dispatchers.NewMessageBuffer(config.bufferSize, dispatcher)
+	// start the worker
 	go buffer.Dispatch()
 	// setup a hook which will fire when the server is up and running
 	// currently used only in tests
