@@ -25,14 +25,14 @@ func TestKinesisConstants(t *testing.T) {
 }
 
 func TestKinesisPutPlacesMessageToQueue(t *testing.T) {
-	dispatcher := NewKinesis("stream_name")
+	dispatcher := NewKinesis("stream_name", "region")
 	dispatcher.messageQueue = make(chan []byte, 1)
 	assert.True(t, dispatcher.Put([]byte("hello")))
 	assert.Equal(t, []byte("hello"), <-dispatcher.messageQueue)
 }
 
 func TestKinesisPutMessageWhenQueueIsFull(t *testing.T) {
-	dispatcher := NewKinesis("stream_name")
+	dispatcher := NewKinesis("stream_name", "region")
 	dispatcher.messageQueue = make(chan []byte, 1)
 	dispatcher.Put([]byte("hello"))
 	assert.False(t, dispatcher.Put([]byte("goodbye")))
@@ -40,7 +40,7 @@ func TestKinesisPutMessageWhenQueueIsFull(t *testing.T) {
 }
 
 func TestKinesisDispatchWillProcessAllQueues(t *testing.T) {
-	dispatcher := NewKinesis("stream_name")
+	dispatcher := NewKinesis("stream_name", "region")
 	fillMessageBuffer(dispatcher, "hello")
 	sendMessage(dispatcher, "hello")
 	go dispatcher.Dispatch()
@@ -57,7 +57,7 @@ func TestKinesisDispatchWillProcessAllQueues(t *testing.T) {
 
 func TestKinesisProcessMessageQueueWillAssembleBatchAndPutInBatchQueue(t *testing.T) {
 	//t.Skip("This blocks; needs fixing")
-	dispatcher := NewKinesis("stream_name")
+	dispatcher := NewKinesis("stream_name", "region")
 	go dispatcher.processMessageQueue()
 	// create a batch by filling the buffer
 	fillMessageBuffer(dispatcher, "The same message all over again")

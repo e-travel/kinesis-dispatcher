@@ -14,9 +14,6 @@ import (
 
 const MEGABYTE = 1024 * 1024
 
-// TODO: make aws region configurable
-const awsRegion string = "eu-west-1"
-
 const KinesisMaxNumberOfRecords = 500
 const KinesisMaxSizeInBytes = 5 * MEGABYTE
 const KinesisBufferSize = 2 * KinesisMaxNumberOfRecords
@@ -29,7 +26,7 @@ type Kinesis struct {
 	batchQueue   chan *kinesis.PutRecordsInput
 }
 
-func NewKinesis(streamName string) *Kinesis {
+func NewKinesis(streamName string, awsRegion string) *Kinesis {
 	// create session
 	sess := session.Must(session.NewSession(&aws.Config{
 		Retryer: client.DefaultRetryer{NumMaxRetries: 10},

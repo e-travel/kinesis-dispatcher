@@ -10,17 +10,18 @@ import (
 	"github.com/e-travel/message-dispatcher/servers"
 )
 
-func createDispatcher(name string) (dispatchers.Dispatcher, error) {
+func createDispatcher(config *Config) (dispatchers.Dispatcher, error) {
 	// choose the backend
 	var dispatcher dispatchers.Dispatcher
 	var err error
-	switch name {
+	switch config.dispatcherType {
 	case "echo":
 		dispatcher = &dispatchers.Echo{}
 	case "kinesis":
-		dispatcher = dispatchers.NewKinesis(name)
+		dispatcher = dispatchers.NewKinesis(config.streamName, config.awsRegion)
 	default:
-		err = errors.New(fmt.Sprintf("Invalid dispatcher type: %s", name))
+		err = errors.New(fmt.Sprintf("Invalid dispatcher type: %s",
+			config.dispatcherType))
 	}
 	return dispatcher, err
 }
@@ -32,7 +33,7 @@ func main() {
 		log.Fatalf("Invalid socket type (%s)", config.socketType)
 	}
 	// create the dispatcher (backend)
-	dispatcher, err := createDispatcher(config.dispatcherType)
+	dispatcher, err := createDispatcher(config)
 	if err != nil {
 		log.Fatal(err.Error())
 	}

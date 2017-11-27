@@ -11,6 +11,7 @@ type Config struct {
 	socketType     string
 	socketAddress  string
 	streamName     string
+	awsRegion      string
 	bufferSize     int
 	dispatcherType string
 }
@@ -25,6 +26,7 @@ func ParseFromCommandLine(config *Config) {
 	flag.StringVar(&config.socketType, "type", servers.UNIXGRAM, "The socket's type (tcp, unix, unixgram)")
 	flag.StringVar(&config.socketAddress, "address", ":8888", "The socket's address (port or file)")
 	flag.StringVar(&config.streamName, "stream-name", "", "The name of the kinesis stream")
+	flag.StringVar(&config.awsRegion, "aws-region", "eu-west-1", "The kinesis stream's AWS region")
 	flag.IntVar(&config.bufferSize, "size", 1024, "The size of the buffer")
 	flag.StringVar(&config.dispatcherType, "dispatcher", "echo", "Dispatcher type (echo, kinesis)")
 	helpRequested := flag.Bool("help", false, "Print usage help and exit")
