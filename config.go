@@ -31,6 +31,10 @@ func ParseFromCommandLine(config *Config) {
 	flag.StringVar(&config.dispatcherType, "dispatcher", "echo", "Dispatcher type (echo, kinesis)")
 	helpRequested := flag.Bool("help", false, "Print usage help and exit")
 
+	if len(os.Args) < 2 {
+		*helpRequested = true
+	}
+
 	flag.Parse()
 
 	if *helpRequested {
