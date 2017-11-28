@@ -31,7 +31,16 @@ Ruby client examples can be found in directory `clients/`
 2. Download the code using `go get github.com/e-travel/message-dispatcher`
 3. `dep ensure`
 4. `go build -v -i`
-5. `go test ./... -v`
+
+### Tests and benchmarks
+
+Tests and examples:
+
+    $ go test ./... -v
+
+Server Benchmarks
+
+    $ go test -bench=. ./...
 
 # License
 
