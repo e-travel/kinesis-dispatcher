@@ -55,3 +55,21 @@ func (dispatcher *Influx) processMessageQueue() {
 		}
 	}
 }
+
+func sendToInflux()
+	lines := bytes.Buffer{}
+	lines.WriteString("cpu_load_short,host=server02 value=0.67")
+	lines.WriteString("\n")
+	lines.WriteString("cpu_load_short,host=server02,region=us-west value=0.55 1422568543702900257")
+	lines.WriteString("\n")
+	lines.WriteString("cpu_load_short,direction=in,host=server01,region=us-west value=2.0 1422568543702900257")
+	lines.WriteString("\n")
+	uri := "http://0.0.0.0:32772/write?db=mydb"
+	resp, err := http.Post(uri, "application/x-www-form-urlencoded", &lines)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	fmt.Println(resp.Status)
+
+}
