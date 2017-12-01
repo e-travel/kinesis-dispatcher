@@ -23,6 +23,7 @@ var ValidSocketTypes = map[string]bool{
 }
 
 func ParseFromCommandLine(config *Config) {
+	flag.StringVar(&config.dispatcherType, "dispatcher", "echo", "Dispatcher type (echo, kinesis, influx)")
 	flag.StringVar(&config.socketType, "type", servers.UNIXGRAM, "The socket's type")
 	flag.StringVar(&config.socketAddress, "address", "/tmp/msg-dsp.sock", "The socket's address (file)")
 	flag.StringVar(&config.streamName, "stream-name", "", "The name of the kinesis stream")
@@ -30,7 +31,6 @@ func ParseFromCommandLine(config *Config) {
 	flag.StringVar(&config.influxHost, "influx-host", "http://localhost:8086", "Influx server hostname")
 	flag.StringVar(&config.influxDatabase, "influx-database", "", "Influx database to use")
 	flag.IntVar(&config.bufferSize, "size", 1024, "The size of the buffer")
-	flag.StringVar(&config.dispatcherType, "dispatcher", "echo", "Dispatcher type (echo, kinesis)")
 	helpRequested := flag.Bool("help", false, "Print usage help and exit")
 
 	if len(os.Args) < 2 {
