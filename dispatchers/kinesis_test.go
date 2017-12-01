@@ -24,14 +24,14 @@ func TestKinesisConstants(t *testing.T) {
 	assert.Equal(t, 1000, KinesisBufferSize)
 }
 
-func TestKinesisPutPlacesMessageToQueue(t *testing.T) {
+func TestKinesis_Put_PlacesMessageToQueue(t *testing.T) {
 	dispatcher := NewKinesis("stream_name", "region")
 	dispatcher.messageQueue = make(chan []byte, 1)
 	assert.True(t, dispatcher.Put([]byte("hello")))
 	assert.Equal(t, []byte("hello"), <-dispatcher.messageQueue)
 }
 
-func TestKinesisPutMessageWhenQueueIsFull(t *testing.T) {
+func TestKinesis_Put_DropsMessage_WhenQueueIsFull(t *testing.T) {
 	dispatcher := NewKinesis("stream_name", "region")
 	dispatcher.messageQueue = make(chan []byte, 1)
 	dispatcher.Put([]byte("hello"))
@@ -39,7 +39,7 @@ func TestKinesisPutMessageWhenQueueIsFull(t *testing.T) {
 	assert.Equal(t, []byte("hello"), <-dispatcher.messageQueue)
 }
 
-func TestKinesisDispatchWillProcessAllQueues(t *testing.T) {
+func TestKinesis_Dispatch_WillProcessAllQueues(t *testing.T) {
 	dispatcher := NewKinesis("stream_name", "region")
 	fillMessageBuffer(dispatcher, "hello")
 	sendMessage(dispatcher, "hello")
@@ -55,7 +55,7 @@ func TestKinesisDispatchWillProcessAllQueues(t *testing.T) {
 	assert.Empty(t, dispatcher.batchQueue)
 }
 
-func TestKinesisProcessMessageQueueWillAssembleBatchAndPutInBatchQueue(t *testing.T) {
+func TestKinesis_ProcessMessageQueue_WillAssembleBatchAndPutInBatchQueue(t *testing.T) {
 	//t.Skip("This blocks; needs fixing")
 	dispatcher := NewKinesis("stream_name", "region")
 	go dispatcher.processMessageQueue()
@@ -68,19 +68,19 @@ func TestKinesisProcessMessageQueueWillAssembleBatchAndPutInBatchQueue(t *testin
 	assert.Equal(t, KinesisMaxNumberOfRecords, len(batch.Records))
 }
 
-func TestKinesisProcessBatchQueueWillPostToKinesis(t *testing.T) {
+func TestKinesis_ProcessBatchQueue_WillPostToKinesis(t *testing.T) {
 	t.Skip("TODO")
 }
 
-func TestKinesisProcessBatchQueueWillLogOnError(t *testing.T) {
+func TestKinesis_ProcessBatchQueue_WillLogOnError(t *testing.T) {
 	t.Skip("TODO")
 }
 
-func TestKinesisProcessBatchQueueWillLogOnFailedRecords(t *testing.T) {
+func TestKinesis_ProcessBatchQueue_WillLogOnFailedRecords(t *testing.T) {
 	t.Skip("TODO")
 }
 
-func TestIsBatchReady(t *testing.T) {
+func Test_IsBatchReady(t *testing.T) {
 	var testCases = []struct {
 		rl    int // records length
 		bc    int // byte count
