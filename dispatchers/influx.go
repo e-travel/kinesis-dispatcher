@@ -1,9 +1,18 @@
 package dispatchers
 
-import "bytes"
+import (
+	"errors"
+
+	log "github.com/sirupsen/logrus"
+
+	"bytes"
+	"fmt"
+	"net/http"
+)
 
 // implements influxdb's line protocol
 
+// TODO: Rethink these values
 const InfluxMaxBatchSize = 500
 const InfluxBatchQueueSize = 10
 
@@ -56,20 +65,32 @@ func (dispatcher *Influx) processMessageQueue() {
 	}
 }
 
-func sendToInflux()
-	lines := bytes.Buffer{}
-	lines.WriteString("cpu_load_short,host=server02 value=0.67")
-	lines.WriteString("\n")
-	lines.WriteString("cpu_load_short,host=server02,region=us-west value=0.55 1422568543702900257")
-	lines.WriteString("\n")
-	lines.WriteString("cpu_load_short,direction=in,host=server01,region=us-west value=2.0 1422568543702900257")
-	lines.WriteString("\n")
-	uri := "http://0.0.0.0:32772/write?db=mydb"
+func (dispatcher *Influx) processBatchQueue() {
+	for batch := range dispatcher.batchQueue {
+		err := dispatcher.sendToInflux(batch)
+		if err != nil {
+			log.Error("Influx response: %s", err.Error())
+		}
+	}
+}
+
+func (dispatcher *Influx) sendToInflux(lines bytes.Buffer) error {
+	// TODO: url escape the strings?
+	uri := fmt.Sprintf("%s/write?db=%s", dispatcher.influxHost,
+		dispatcher.influxDatabase)
 	resp, err := http.Post(uri, "application/x-www-form-urlencoded", &lines)
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		return err
 	}
-	fmt.Println(resp.Status)
-
+	// TODO: handle status properly
+	switch resp.StatusCode {
+	case 204:
+		return nil
+	case 404:
+		return errors.New("Not Found")
+	case 500:
+		return errors.New("Internal Server Error")
+	default:
+		return errors.New("")
+	}
 }
