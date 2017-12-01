@@ -17,14 +17,12 @@ type Config struct {
 }
 
 var ValidSocketTypes = map[string]bool{
-	servers.TCP:      true,
-	servers.UNIX:     true,
 	servers.UNIXGRAM: true,
 }
 
 func ParseFromCommandLine(config *Config) {
-	flag.StringVar(&config.socketType, "type", servers.UNIXGRAM, "The socket's type (tcp, unix, unixgram)")
-	flag.StringVar(&config.socketAddress, "address", ":8888", "The socket's address (port or file)")
+	flag.StringVar(&config.socketType, "type", servers.UNIXGRAM, "The socket's type")
+	flag.StringVar(&config.socketAddress, "address", "/tmp/msg-dsp.sock", "The socket's address (file)")
 	flag.StringVar(&config.streamName, "stream-name", "", "The name of the kinesis stream")
 	flag.StringVar(&config.awsRegion, "aws-region", "eu-west-1", "The kinesis stream's AWS region")
 	flag.IntVar(&config.bufferSize, "size", 1024, "The size of the buffer")

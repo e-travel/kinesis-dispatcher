@@ -1,18 +1,18 @@
 # Message Dispatcher
 
-Project under construction. Soon<sup>TM</sup>.
+`message-dispatcher` is a simple message broker service that can
+receive messages through:
 
-## Purpose
+* unix datagram socket (impemented)
+* udp endpoint (TODO)
 
-The purpose of this program is to act as a server for receiving
-application data and forwarding them to a recipient backend (e.g. AWS
-Kinesis). Supported servers include:
+and forward them to:
 
-* unix domain socket (stream)
-* tcp socket (stream)
-* unix datagram socket (datagram)
+* AWS Kinesis
+* InfluxDB (through the http API)
 
-Emphasis is given to performance and non-blocking client requests.
+Emphasis is given to low latency as far as the service's client is
+concerned and ensuring non-blocking client requests.
 
 ## Instructions
 
