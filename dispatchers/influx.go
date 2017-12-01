@@ -1,36 +1,35 @@
 package dispatchers
 
 import (
-	"errors"
+	"io"
 
 	log "github.com/sirupsen/logrus"
 
 	"bytes"
 	"fmt"
-	"net/http"
 )
 
 // implements influxdb's line protocol
+type influxClient struct {
+}
 
 // TODO: Rethink these values
 const InfluxMaxBatchSize = 500
 const InfluxBatchQueueSize = 10
 
 type Influx struct {
-	influxHost      string
-	influxDatabase  string
+	client          InfluxHttpClientInterface
 	influxBatchSize int
 	messageQueue    chan []byte
-	batchQueue      chan bytes.Buffer
+	batchQueue      chan *bytes.Buffer
 }
 
-func NewInflux(influxHost string, influxDatabase string) *Influx {
+func NewInflux(client InfluxHttpClientInterface) *Influx {
 	return &Influx{
-		influxHost:      influxHost,
-		influxDatabase:  influxDatabase,
+		client:          client,
 		influxBatchSize: InfluxMaxBatchSize,
 		messageQueue:    make(chan []byte, InfluxMaxBatchSize),
-		batchQueue:      make(chan bytes.Buffer, InfluxBatchQueueSize),
+		batchQueue:      make(chan *bytes.Buffer, InfluxBatchQueueSize),
 	}
 }
 
@@ -44,53 +43,43 @@ func (dispatcher *Influx) Put(message []byte) bool {
 }
 
 func (dispatcher *Influx) Dispatch() {
+	go dispatcher.processMessageQueue()
+	go dispatcher.processBatchQueue()
 }
 
 func (dispatcher *Influx) processMessageQueue() {
-	lines := bytes.Buffer{}
+	var lines bytes.Buffer
 	lineCount := 0
 	for message := range dispatcher.messageQueue {
+		fmt.Println("Received message")
 		if lineCount == dispatcher.influxBatchSize {
-			// send batch to influx
-			select {
-			case dispatcher.batchQueue <- lines:
-				lines.Reset()
-			default:
+			fmt.Println("Creating Batch")
+			batch := bytes.Buffer{}
+			_, err := io.Copy(&batch, &lines)
+			if err != nil {
+				log.Error(err.Error())
+			} else {
+				select {
+				case dispatcher.batchQueue <- &batch:
+				default:
+					log.Error("Failed to enqueue batch")
+				}
 			}
-		} else {
-			// add line to buffer
-			lines.Write(message)
-			lines.WriteString("\n")
+			lines.Reset()
+			lineCount = 0
 		}
+		// add line to buffer
+		lines.Write(message)
+		lines.WriteString("\n")
+		lineCount++
 	}
 }
 
 func (dispatcher *Influx) processBatchQueue() {
 	for batch := range dispatcher.batchQueue {
-		err := dispatcher.sendToInflux(batch)
+		err := dispatcher.client.WriteLines(batch)
 		if err != nil {
-			log.Error("Influx response: %s", err.Error())
+			log.Error(err.Error())
 		}
-	}
-}
-
-func (dispatcher *Influx) sendToInflux(lines bytes.Buffer) error {
-	// TODO: url escape the strings?
-	uri := fmt.Sprintf("%s/write?db=%s", dispatcher.influxHost,
-		dispatcher.influxDatabase)
-	resp, err := http.Post(uri, "application/x-www-form-urlencoded", &lines)
-	if err != nil {
-		return err
-	}
-	// TODO: handle status properly
-	switch resp.StatusCode {
-	case 204:
-		return nil
-	case 404:
-		return errors.New("Not Found")
-	case 500:
-		return errors.New("Internal Server Error")
-	default:
-		return errors.New("")
 	}
 }

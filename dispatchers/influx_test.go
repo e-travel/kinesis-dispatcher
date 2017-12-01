@@ -1,48 +1,55 @@
 package dispatchers
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func sendMessage(dispatcher *Influx, messageContent string) {
+type MockInfluxHttpClient struct {
+	mock.Mock
+}
+
+func (c *MockInfluxHttpClient) WriteLines(lines *bytes.Buffer) error {
+	args := c.Called(lines)
+	err, _ := args.Get(0).(error)
+	return err
+}
+
+func sendInfluxMessage(dispatcher *Influx, messageContent string) {
 	dispatcher.Put([]byte(messageContent))
 }
 
-func fillMessageBuffer(dispatcher *Influx, messageContent string) {
-	for i := 0; i < InfluxMaxNumberOfRecords; i++ {
-		sendMessage(dispatcher, messageContent)
+func fillInfluxMessageBuffer(dispatcher *Influx, messageContent string) {
+	for i := 0; i < dispatcher.influxBatchSize; i++ {
+		sendInfluxMessage(dispatcher, messageContent)
 	}
 }
 
-func TestInfluxConstants(t *testing.T) {
-	assert.Equal(t, 500, InfluxMaxNumberOfRecords)
-	assert.Equal(t, 5*MEGABYTE, InfluxMaxSizeInBytes)
-	assert.Equal(t, 1000, InfluxBufferSize)
-}
-
-func TestInfluxPutPlacesMessageToQueue(t *testing.T) {
-	dispatcher := NewInflux("stream_name", "region")
+func TestInflux_Put_PlacesMessageToQueue(t *testing.T) {
+	dispatcher := NewInflux(&MockInfluxHttpClient{})
 	dispatcher.messageQueue = make(chan []byte, 1)
 	assert.True(t, dispatcher.Put([]byte("hello")))
 	assert.Equal(t, []byte("hello"), <-dispatcher.messageQueue)
 }
 
-func TestInfluxPutMessageWhenQueueIsFull(t *testing.T) {
-	dispatcher := NewInflux("stream_name", "region")
+func TestInflux_Put_DropsMessageWhenQueueIsFull(t *testing.T) {
+	dispatcher := NewInflux(&MockInfluxHttpClient{})
 	dispatcher.messageQueue = make(chan []byte, 1)
 	dispatcher.Put([]byte("hello"))
 	assert.False(t, dispatcher.Put([]byte("goodbye")))
 	assert.Equal(t, []byte("hello"), <-dispatcher.messageQueue)
 }
 
-func TestInfluxDispatchWillProcessAllQueues(t *testing.T) {
-	dispatcher := NewInflux("stream_name", "region")
-	fillMessageBuffer(dispatcher, "hello")
-	sendMessage(dispatcher, "hello")
-	go dispatcher.Dispatch()
+func TestInflux_Dispatch_WillProcessAllQueues(t *testing.T) {
+	dispatcher := NewInflux(&MockInfluxHttpClient{})
+	dispatcher.influxBatchSize = 5
+	fillInfluxMessageBuffer(dispatcher, "hello")
+	sendInfluxMessage(dispatcher, "goodbye")
+	dispatcher.Dispatch()
 	// drain sink
 	timer := time.NewTimer(time.Second)
 	select {
@@ -54,27 +61,35 @@ func TestInfluxDispatchWillProcessAllQueues(t *testing.T) {
 	assert.Empty(t, dispatcher.batchQueue)
 }
 
-func TestInfluxProcessMessageQueueWillAssembleBatchAndPutInBatchQueue(t *testing.T) {
-	//t.Skip("This blocks; needs fixing")
-	dispatcher := NewInflux("stream_name", "region")
+func TestInflux_processMessageQueue_WillAssembleBatchAndPutInBatchQueue(t *testing.T) {
+	dispatcher := NewInflux(&MockInfluxHttpClient{})
+	dispatcher.influxBatchSize = 5
 	go dispatcher.processMessageQueue()
 	// create a batch by filling the buffer
-	fillMessageBuffer(dispatcher, "The same message all over again")
+	fillInfluxMessageBuffer(dispatcher, "The same message all over again")
 	// send one more message to trigger batch creation
-	sendMessage(dispatcher, "This will stay in the queue")
+	sendInfluxMessage(dispatcher, "This will stay in the queue")
 	// get the batch
-	batch := <-dispatcher.batchQueue
-	assert.Equal(t, InfluxMaxNumberOfRecords, len(batch.Records))
+	<-dispatcher.batchQueue
 }
 
-func TestInfluxProcessBatchQueueWillPostToInflux(t *testing.T) {
-	t.Skip("TODO")
-}
+func TestInflux_processBatchQueue_WillSendBatchToInflux(t *testing.T) {
+	// create mock client and inject to dispatcher
+	client := &MockInfluxHttpClient{}
+	dispatcher := NewInflux(client)
+	dispatcher.client = client
 
-func TestInfluxProcessBatchQueueWillLogOnError(t *testing.T) {
-	t.Skip("TODO")
-}
+	buf := bytes.NewBufferString("hello")
 
-func TestInfluxProcessBatchQueueWillLogOnFailedRecords(t *testing.T) {
-	t.Skip("TODO")
+	// setup expectations
+	client.On("WriteLines", buf).Once().Return(nil)
+
+	// prepare
+	dispatcher.batchQueue <- buf
+	close(dispatcher.batchQueue)
+
+	// fire
+	dispatcher.processBatchQueue()
+
+	client.AssertExpectations(t)
 }
