@@ -45,3 +45,24 @@ func TestStreamNameValidation(t *testing.T) {
 			validateStreamName(testCase.streamName, testCase.dispatcherType))
 	}
 }
+
+func TestInfluxValidation(t *testing.T) {
+	var testCases = []struct {
+		dispatcherType string
+		host           string
+		database       string
+		valid          bool
+	}{
+		{"influx", "", "", false},
+		{"influx", "host", "", false},
+		{"influx", "", "database", false},
+		{"influx", "host", "database", true},
+		{"other", "", "", true},
+		{"", "", "", true},
+	}
+
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.valid,
+			validateInflux(testCase.dispatcherType, testCase.host, testCase.database))
+	}
+}

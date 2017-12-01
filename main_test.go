@@ -15,6 +15,7 @@ func TestCreateDispatcher(t *testing.T) {
 	}{
 		{Config{dispatcherType: "echo"}, "", &dispatchers.Echo{}},
 		{Config{dispatcherType: "kinesis"}, "", &dispatchers.Kinesis{}},
+		{Config{dispatcherType: "influx"}, "", &dispatchers.Influx{}},
 		{Config{dispatcherType: "foo"}, "Invalid dispatcher type: foo", nil},
 	}
 	for _, testCase := range testCases {

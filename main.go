@@ -17,6 +17,12 @@ func createDispatcher(config *Config) (dispatchers.Dispatcher, error) {
 	switch config.dispatcherType {
 	case "echo":
 		dispatcher = &dispatchers.Echo{}
+	case "influx":
+		client := &dispatchers.InfluxHttpClient{
+			Host:     config.influxHost,
+			Database: config.influxDatabase,
+		}
+		dispatcher = dispatchers.NewInflux(client)
 	case "kinesis":
 		dispatcher = dispatchers.NewKinesis(config.streamName, config.awsRegion)
 	default:
