@@ -1,7 +1,7 @@
 require 'socket'
 
-socket_address = ARGV.last || '/tmp/my.sock'
-puts "set address=#{socket_address}"
+socket_address = '/tmp/msg-dsp.sock'
+puts "set address=_#{socket_address}_"
 
 class UnixDatagramClient
   def initialize(address)
