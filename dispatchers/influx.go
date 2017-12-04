@@ -2,34 +2,34 @@ package dispatchers
 
 import (
 	"io"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"bytes"
-	"fmt"
 )
 
-// implements influxdb's line protocol
-type influxClient struct {
-}
-
-// TODO: Rethink these values
 const InfluxMaxBatchSize = 500
+
+// TODO: Rethink these values and make some configurable
+const InfluxMaxBatchFrequency = 10 * time.Second
 const InfluxBatchQueueSize = 10
 
 type Influx struct {
-	client          InfluxHttpClientInterface
-	influxBatchSize int
-	messageQueue    chan []byte
-	batchQueue      chan *bytes.Buffer
+	client                  InfluxHttpClientInterface
+	influxBatchSize         int
+	influxMaxBatchFrequency time.Duration
+	messageQueue            chan []byte
+	batchQueue              chan *bytes.Buffer
 }
 
 func NewInflux(client InfluxHttpClientInterface) *Influx {
 	return &Influx{
-		client:          client,
-		influxBatchSize: InfluxMaxBatchSize,
-		messageQueue:    make(chan []byte, InfluxMaxBatchSize),
-		batchQueue:      make(chan *bytes.Buffer, InfluxBatchQueueSize),
+		client:                  client,
+		influxBatchSize:         InfluxMaxBatchSize,
+		influxMaxBatchFrequency: InfluxMaxBatchFrequency,
+		messageQueue:            make(chan []byte, InfluxMaxBatchSize),
+		batchQueue:              make(chan *bytes.Buffer, InfluxBatchQueueSize),
 	}
 }
 
@@ -47,31 +47,48 @@ func (dispatcher *Influx) Dispatch() {
 	go dispatcher.processBatchQueue()
 }
 
+func (dispatcher *Influx) dispatchBatch(lines *bytes.Buffer) {
+	if lines.Len() == 0 {
+		return
+	}
+	batch := bytes.Buffer{}
+	_, err := io.Copy(&batch, lines)
+	if err != nil {
+		log.Error(err.Error())
+	} else {
+		select {
+		case dispatcher.batchQueue <- &batch:
+		default:
+			log.Error("Failed to enqueue batch")
+		}
+	}
+	lines.Reset()
+}
+
 func (dispatcher *Influx) processMessageQueue() {
 	var lines bytes.Buffer
-	lineCount := 0
-	for message := range dispatcher.messageQueue {
-		fmt.Println("Received message")
-		if lineCount == dispatcher.influxBatchSize {
-			fmt.Println("Creating Batch")
-			batch := bytes.Buffer{}
-			_, err := io.Copy(&batch, &lines)
-			if err != nil {
-				log.Error(err.Error())
-			} else {
-				select {
-				case dispatcher.batchQueue <- &batch:
-				default:
-					log.Error("Failed to enqueue batch")
-				}
+	var lineCount int
+	ticker := time.NewTicker(dispatcher.influxMaxBatchFrequency)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if lines.Len() > 0 {
+				dispatcher.dispatchBatch(&lines)
+				lineCount = 0
 			}
-			lines.Reset()
-			lineCount = 0
+		case message := <-dispatcher.messageQueue:
+			if lineCount == dispatcher.influxBatchSize {
+				dispatcher.dispatchBatch(&lines)
+				lineCount = 0
+			}
+			// add message to buffer
+			if len(message) > 0 {
+				lines.Write(message)
+				lines.WriteString("\n")
+				lineCount++
+			}
 		}
-		// add line to buffer
-		lines.Write(message)
-		lines.WriteString("\n")
-		lineCount++
 	}
 }
 
