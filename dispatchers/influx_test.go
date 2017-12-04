@@ -61,7 +61,7 @@ func TestInflux_Dispatch_WillProcessAllQueues(t *testing.T) {
 	assert.Empty(t, dispatcher.batchQueue)
 }
 
-func TestInflux_processMessageQueue_WillAssembleBatchAndPutInBatchQueue(t *testing.T) {
+func TestInflux_processMessageQueue_WillAssembleBatch_WhenMaxSizeReached(t *testing.T) {
 	dispatcher := NewInflux(&MockInfluxHttpClient{})
 	dispatcher.influxBatchSize = 5
 	go dispatcher.processMessageQueue()
@@ -71,6 +71,34 @@ func TestInflux_processMessageQueue_WillAssembleBatchAndPutInBatchQueue(t *testi
 	sendInfluxMessage(dispatcher, "This will stay in the queue")
 	// get the batch
 	<-dispatcher.batchQueue
+}
+
+func TestInflux_processMessageQueue_WillAssembleBatch_WhenTimerFires(t *testing.T) {
+	dispatcher := NewInflux(&MockInfluxHttpClient{})
+	dispatcher.influxMaxBatchFrequency = time.Microsecond
+	// send a single message to trigger batch creation
+	sendInfluxMessage(dispatcher, "First message")
+	go dispatcher.processMessageQueue()
+	<-dispatcher.batchQueue
+}
+
+func TestInflux_processMessageQueue__WillDoNothing_WhenLinesEmpty(t *testing.T) {
+	dispatcher := NewInflux(&MockInfluxHttpClient{})
+	dispatcher.influxMaxBatchFrequency = time.Microsecond
+	// send a single empty message
+	sendInfluxMessage(dispatcher, "")
+	go dispatcher.processMessageQueue()
+	assert.Empty(t, dispatcher.batchQueue)
+}
+
+func TestInflux_dispatchBatch_WillPutACopyToBatchQueue_AndResetBuffer(t *testing.T) {
+	dispatcher := NewInflux(&MockInfluxHttpClient{})
+	lines := bytes.NewBufferString("Hello")
+	dispatcher.dispatchBatch(lines)
+	// get the copy
+	batch := <-dispatcher.batchQueue
+	assert.Equal(t, 0, lines.Len())
+	assert.NotEqual(t, lines, batch)
 }
 
 func TestInflux_processBatchQueue_WillSendBatchToInflux(t *testing.T) {
