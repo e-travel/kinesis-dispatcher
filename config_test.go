@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -64,5 +65,20 @@ func TestInfluxValidation(t *testing.T) {
 	for _, testCase := range testCases {
 		assert.Equal(t, testCase.valid,
 			validateInflux(testCase.dispatcherType, testCase.host, testCase.database))
+	}
+}
+
+func TestBatchFrequencyValidation(t *testing.T) {
+	var testCases = []struct {
+		freq  time.Duration
+		valid bool
+	}{
+		{-1 * time.Second, false},
+		{0 * time.Second, false},
+		{1 * time.Second, true},
+	}
+
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.valid, validateBatchFrequency(testCase.freq))
 	}
 }
