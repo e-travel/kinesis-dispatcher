@@ -12,7 +12,6 @@ import (
 const InfluxMaxBatchSize = 500
 
 // TODO: Rethink these values and make some configurable
-const InfluxMaxBatchFrequency = 10 * time.Second
 const InfluxBatchQueueSize = 10
 
 type Influx struct {
@@ -23,11 +22,11 @@ type Influx struct {
 	batchQueue        chan *bytes.Buffer
 }
 
-func NewInflux(client InfluxHttpClientInterface) *Influx {
+func NewInflux(client InfluxHttpClientInterface, maxBatchFrequency time.Duration) *Influx {
 	return &Influx{
 		client:            client,
 		batchSize:         InfluxMaxBatchSize,
-		maxBatchFrequency: InfluxMaxBatchFrequency,
+		maxBatchFrequency: maxBatchFrequency,
 		messageQueue:      make(chan []byte, InfluxMaxBatchSize),
 		batchQueue:        make(chan *bytes.Buffer, InfluxBatchQueueSize),
 	}

@@ -22,7 +22,7 @@ func createDispatcher(config *Config) (dispatchers.Dispatcher, error) {
 			Host:     config.influxHost,
 			Database: config.influxDatabase,
 		}
-		dispatcher = dispatchers.NewInflux(client)
+		dispatcher = dispatchers.NewInflux(client, config.batchFrequency)
 	case "kinesis":
 		dispatcher = dispatchers.NewKinesis(config.streamName, config.awsRegion)
 	default:
