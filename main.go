@@ -24,7 +24,7 @@ func createDispatcher(config *Config) (dispatchers.Dispatcher, error) {
 		}
 		dispatcher = dispatchers.NewInflux(client, config.batchFrequency)
 	case "kinesis":
-		dispatcher = dispatchers.NewKinesis(config.streamName, config.awsRegion)
+		dispatcher = dispatchers.NewKinesis(config.streamName, config.awsRegion, config.batchFrequency)
 	default:
 		err = errors.New(fmt.Sprintf("Invalid dispatcher type: %s",
 			config.dispatcherType))

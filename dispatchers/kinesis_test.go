@@ -25,14 +25,14 @@ func TestKinesisConstants(t *testing.T) {
 }
 
 func TestKinesis_Put_PlacesMessageToQueue(t *testing.T) {
-	dispatcher := NewKinesis("stream_name", "region")
+	dispatcher := NewKinesis("stream_name", "region", 10*time.Second)
 	dispatcher.messageQueue = make(chan []byte, 1)
 	assert.True(t, dispatcher.Put([]byte("hello")))
 	assert.Equal(t, []byte("hello"), <-dispatcher.messageQueue)
 }
 
 func TestKinesis_Put_DropsMessage_WhenQueueIsFull(t *testing.T) {
-	dispatcher := NewKinesis("stream_name", "region")
+	dispatcher := NewKinesis("stream_name", "region", 10*time.Second)
 	dispatcher.messageQueue = make(chan []byte, 1)
 	dispatcher.Put([]byte("hello"))
 	assert.False(t, dispatcher.Put([]byte("goodbye")))
@@ -40,7 +40,7 @@ func TestKinesis_Put_DropsMessage_WhenQueueIsFull(t *testing.T) {
 }
 
 func TestKinesis_Dispatch_WillProcessAllQueues(t *testing.T) {
-	dispatcher := NewKinesis("stream_name", "region")
+	dispatcher := NewKinesis("stream_name", "region", 10*time.Second)
 	fillMessageBuffer(dispatcher, "hello")
 	sendMessage(dispatcher, "hello")
 	go dispatcher.Dispatch()
@@ -57,7 +57,7 @@ func TestKinesis_Dispatch_WillProcessAllQueues(t *testing.T) {
 
 func TestKinesis_ProcessMessageQueue_WillPutInBatchQueue_WhenReady(t *testing.T) {
 	//t.Skip("This blocks; needs fixing")
-	dispatcher := NewKinesis("stream_name", "region")
+	dispatcher := NewKinesis("stream_name", "region", 10*time.Second)
 	go dispatcher.processMessageQueue()
 	// create a batch by filling the buffer
 	fillMessageBuffer(dispatcher, "The same message all over again")
@@ -70,8 +70,7 @@ func TestKinesis_ProcessMessageQueue_WillPutInBatchQueue_WhenReady(t *testing.T)
 
 func TestKinesis_ProcessMessageQueue_WillPutInBatchQueue_WhenTimerFires(t *testing.T) {
 	t.Skip("Implement timer test")
-	dispatcher := NewKinesis("stream_name", "region")
-	dispatcher.maxBatchFrequency = time.Microsecond
+	dispatcher := NewKinesis("stream_name", "region", time.Microsecond)
 	go dispatcher.processMessageQueue()
 	// send one message to trigger batch creation
 	sendMessage(dispatcher, "This will stay in the queue")

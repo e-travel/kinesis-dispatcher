@@ -21,8 +21,6 @@ const KinesisMaxSizeInBytes = 5 * MEGABYTE
 const KinesisBufferSize = 2 * KinesisMaxNumberOfRecords
 const KinesisPartitionKeyMaxSize = 256
 
-const KinesisMaxBatchFrequency = 10 * time.Second
-
 type Kinesis struct {
 	service           kinesisiface.KinesisAPI
 	streamName        string
@@ -31,7 +29,7 @@ type Kinesis struct {
 	batchQueue        chan *kinesis.PutRecordsInput
 }
 
-func NewKinesis(streamName string, awsRegion string) *Kinesis {
+func NewKinesis(streamName string, awsRegion string, maxBatchFrequency time.Duration) *Kinesis {
 	// create session
 	sess := session.Must(session.NewSession(&aws.Config{
 		Retryer: client.DefaultRetryer{NumMaxRetries: 10},
@@ -40,7 +38,7 @@ func NewKinesis(streamName string, awsRegion string) *Kinesis {
 	return &Kinesis{
 		service:           kinesis.New(sess),
 		streamName:        streamName,
-		maxBatchFrequency: KinesisMaxBatchFrequency,
+		maxBatchFrequency: maxBatchFrequency,
 		messageQueue:      make(chan []byte, KinesisBufferSize),
 		batchQueue:        make(chan *kinesis.PutRecordsInput, KinesisBufferSize),
 	}
