@@ -24,7 +24,7 @@ func sendInfluxMessage(dispatcher *Influx, messageContent string) {
 }
 
 func fillInfluxMessageBuffer(dispatcher *Influx, messageContent string) {
-	for i := 0; i < dispatcher.influxBatchSize; i++ {
+	for i := 0; i < dispatcher.batchSize; i++ {
 		sendInfluxMessage(dispatcher, messageContent)
 	}
 }
@@ -46,7 +46,7 @@ func TestInflux_Put_DropsMessageWhenQueueIsFull(t *testing.T) {
 
 func TestInflux_Dispatch_WillProcessAllQueues(t *testing.T) {
 	dispatcher := NewInflux(&MockInfluxHttpClient{})
-	dispatcher.influxBatchSize = 5
+	dispatcher.batchSize = 5
 	fillInfluxMessageBuffer(dispatcher, "hello")
 	sendInfluxMessage(dispatcher, "goodbye")
 	dispatcher.Dispatch()
@@ -63,7 +63,7 @@ func TestInflux_Dispatch_WillProcessAllQueues(t *testing.T) {
 
 func TestInflux_processMessageQueue_WillAssembleBatch_WhenMaxSizeReached(t *testing.T) {
 	dispatcher := NewInflux(&MockInfluxHttpClient{})
-	dispatcher.influxBatchSize = 5
+	dispatcher.batchSize = 5
 	go dispatcher.processMessageQueue()
 	// create a batch by filling the buffer
 	fillInfluxMessageBuffer(dispatcher, "The same message all over again")
@@ -75,7 +75,7 @@ func TestInflux_processMessageQueue_WillAssembleBatch_WhenMaxSizeReached(t *test
 
 func TestInflux_processMessageQueue_WillAssembleBatch_WhenTimerFires(t *testing.T) {
 	dispatcher := NewInflux(&MockInfluxHttpClient{})
-	dispatcher.influxMaxBatchFrequency = time.Microsecond
+	dispatcher.maxBatchFrequency = time.Microsecond
 	// send a single message to trigger batch creation
 	sendInfluxMessage(dispatcher, "First message")
 	go dispatcher.processMessageQueue()
@@ -84,7 +84,7 @@ func TestInflux_processMessageQueue_WillAssembleBatch_WhenTimerFires(t *testing.
 
 func TestInflux_processMessageQueue__WillDoNothing_WhenLinesEmpty(t *testing.T) {
 	dispatcher := NewInflux(&MockInfluxHttpClient{})
-	dispatcher.influxMaxBatchFrequency = time.Microsecond
+	dispatcher.maxBatchFrequency = time.Microsecond
 	// send a single empty message
 	sendInfluxMessage(dispatcher, "")
 	go dispatcher.processMessageQueue()

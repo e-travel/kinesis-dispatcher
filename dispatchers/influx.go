@@ -16,20 +16,20 @@ const InfluxMaxBatchFrequency = 10 * time.Second
 const InfluxBatchQueueSize = 10
 
 type Influx struct {
-	client                  InfluxHttpClientInterface
-	influxBatchSize         int
-	influxMaxBatchFrequency time.Duration
-	messageQueue            chan []byte
-	batchQueue              chan *bytes.Buffer
+	client            InfluxHttpClientInterface
+	batchSize         int
+	maxBatchFrequency time.Duration
+	messageQueue      chan []byte
+	batchQueue        chan *bytes.Buffer
 }
 
 func NewInflux(client InfluxHttpClientInterface) *Influx {
 	return &Influx{
-		client:                  client,
-		influxBatchSize:         InfluxMaxBatchSize,
-		influxMaxBatchFrequency: InfluxMaxBatchFrequency,
-		messageQueue:            make(chan []byte, InfluxMaxBatchSize),
-		batchQueue:              make(chan *bytes.Buffer, InfluxBatchQueueSize),
+		client:            client,
+		batchSize:         InfluxMaxBatchSize,
+		maxBatchFrequency: InfluxMaxBatchFrequency,
+		messageQueue:      make(chan []byte, InfluxMaxBatchSize),
+		batchQueue:        make(chan *bytes.Buffer, InfluxBatchQueueSize),
 	}
 }
 
@@ -68,7 +68,7 @@ func (dispatcher *Influx) dispatchBatch(lines *bytes.Buffer) {
 func (dispatcher *Influx) processMessageQueue() {
 	var lines bytes.Buffer
 	var lineCount int
-	ticker := time.NewTicker(dispatcher.influxMaxBatchFrequency)
+	ticker := time.NewTicker(dispatcher.maxBatchFrequency)
 	defer ticker.Stop()
 	for {
 		select {
@@ -78,7 +78,7 @@ func (dispatcher *Influx) processMessageQueue() {
 				lineCount = 0
 			}
 		case message := <-dispatcher.messageQueue:
-			if lineCount == dispatcher.influxBatchSize {
+			if lineCount == dispatcher.batchSize {
 				dispatcher.dispatchBatch(&lines)
 				lineCount = 0
 			}
