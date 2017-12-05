@@ -3,6 +3,8 @@ package dispatchers
 // this is a stub struct for the moment
 
 import (
+	"time"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -19,11 +21,14 @@ const KinesisMaxSizeInBytes = 5 * MEGABYTE
 const KinesisBufferSize = 2 * KinesisMaxNumberOfRecords
 const KinesisPartitionKeyMaxSize = 256
 
+const KinesisMaxBatchFrequency = 10 * time.Second
+
 type Kinesis struct {
-	service      kinesisiface.KinesisAPI
-	streamName   string
-	messageQueue chan []byte
-	batchQueue   chan *kinesis.PutRecordsInput
+	service           kinesisiface.KinesisAPI
+	streamName        string
+	maxBatchFrequency time.Duration
+	messageQueue      chan []byte
+	batchQueue        chan *kinesis.PutRecordsInput
 }
 
 func NewKinesis(streamName string, awsRegion string) *Kinesis {
@@ -33,10 +38,11 @@ func NewKinesis(streamName string, awsRegion string) *Kinesis {
 		Region:  aws.String(awsRegion),
 	}))
 	return &Kinesis{
-		service:      kinesis.New(sess),
-		streamName:   streamName,
-		messageQueue: make(chan []byte, KinesisBufferSize),
-		batchQueue:   make(chan *kinesis.PutRecordsInput, KinesisBufferSize),
+		service:           kinesis.New(sess),
+		streamName:        streamName,
+		maxBatchFrequency: KinesisMaxBatchFrequency,
+		messageQueue:      make(chan []byte, KinesisBufferSize),
+		batchQueue:        make(chan *kinesis.PutRecordsInput, KinesisBufferSize),
 	}
 }
 
@@ -58,22 +64,34 @@ func (dispatcher *Kinesis) processMessageQueue() {
 	batch := newBatch(dispatcher.streamName)
 	byteCount := 0
 
-	for message := range dispatcher.messageQueue {
-		if isBatchReady(len(batch.Records), len(message), byteCount) {
-			select {
-			case dispatcher.batchQueue <- batch:
-			default:
+	ticker := time.NewTicker(dispatcher.maxBatchFrequency)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if len(batch.Records) > 0 {
+				dispatcher.batchQueue <- batch
+				batch = newBatch(dispatcher.streamName)
+				byteCount = 0
 			}
-			batch = newBatch(dispatcher.streamName)
-			byteCount = 0
+		case message := <-dispatcher.messageQueue:
+			if isBatchReady(len(batch.Records), len(message), byteCount) {
+				select {
+				case dispatcher.batchQueue <- batch:
+				default:
+				}
+				batch = newBatch(dispatcher.streamName)
+				byteCount = 0
+			}
+			entry := &kinesis.PutRecordsRequestEntry{
+				Data:         message,
+				PartitionKey: aws.String(generatePartitionKey(message)),
+			}
+			// TODO: validate that the individual entry size is not above 1MB
+			batch.Records = append(batch.Records, entry)
+			byteCount += len(entry.Data) + len([]byte(*entry.PartitionKey))
 		}
-		entry := &kinesis.PutRecordsRequestEntry{
-			Data:         message,
-			PartitionKey: aws.String(generatePartitionKey(message)),
-		}
-		// TODO: validate that the individual entry size is not above 1MB
-		batch.Records = append(batch.Records, entry)
-		byteCount += len(entry.Data) + len([]byte(*entry.PartitionKey))
 	}
 }
 

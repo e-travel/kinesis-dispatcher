@@ -55,13 +55,25 @@ func TestKinesis_Dispatch_WillProcessAllQueues(t *testing.T) {
 	assert.Empty(t, dispatcher.batchQueue)
 }
 
-func TestKinesis_ProcessMessageQueue_WillAssembleBatchAndPutInBatchQueue(t *testing.T) {
+func TestKinesis_ProcessMessageQueue_WillPutInBatchQueue_WhenReady(t *testing.T) {
 	//t.Skip("This blocks; needs fixing")
 	dispatcher := NewKinesis("stream_name", "region")
 	go dispatcher.processMessageQueue()
 	// create a batch by filling the buffer
 	fillMessageBuffer(dispatcher, "The same message all over again")
 	// send one more message to trigger batch creation
+	sendMessage(dispatcher, "This will stay in the queue")
+	// get the batch
+	batch := <-dispatcher.batchQueue
+	assert.Equal(t, KinesisMaxNumberOfRecords, len(batch.Records))
+}
+
+func TestKinesis_ProcessMessageQueue_WillPutInBatchQueue_WhenTimerFires(t *testing.T) {
+	t.Skip("Implement timer test")
+	dispatcher := NewKinesis("stream_name", "region")
+	dispatcher.maxBatchFrequency = time.Microsecond
+	go dispatcher.processMessageQueue()
+	// send one message to trigger batch creation
 	sendMessage(dispatcher, "This will stay in the queue")
 	// get the batch
 	batch := <-dispatcher.batchQueue
