@@ -3,8 +3,8 @@
 `message-dispatcher` is a simple message broker service that can
 receive messages through:
 
-* unix datagram socket (impemented)
-* udp endpoint (TODO)
+* unix datagram socket
+* udp endpoint
 
 and forward them to:
 

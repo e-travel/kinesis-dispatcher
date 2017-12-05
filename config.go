@@ -20,11 +20,12 @@ type Config struct {
 
 var ValidSocketTypes = map[string]bool{
 	servers.UNIXGRAM: true,
+	servers.UDP:      true,
 }
 
 func ParseFromCommandLine(config *Config) {
 	flag.StringVar(&config.dispatcherType, "dispatcher", "echo", "Dispatcher type (echo, kinesis, influx)")
-	flag.StringVar(&config.socketType, "type", servers.UNIXGRAM, "The socket's type")
+	flag.StringVar(&config.socketType, "type", servers.UNIXGRAM, "The socket's type (unixgram, udp)")
 	flag.StringVar(&config.socketAddress, "address", "/tmp/msg-dsp.sock", "The socket's address (file)")
 	flag.StringVar(&config.streamName, "stream-name", "", "The name of the kinesis stream")
 	flag.StringVar(&config.awsRegion, "aws-region", "eu-west-1", "The kinesis stream's AWS region")

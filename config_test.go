@@ -14,7 +14,7 @@ func TestSocketTypeValidation(t *testing.T) {
 		{"tcp", false},
 		{"unix", false},
 		{"unixgram", true},
-		{"udp", false},
+		{"udp", true},
 		{"datagram", false},
 		{"whatever", false},
 		{"", false},

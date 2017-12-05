@@ -4,6 +4,7 @@ import "github.com/e-travel/message-dispatcher/dispatchers"
 
 const (
 	UNIXGRAM = "unixgram"
+	UDP      = "udp"
 )
 
 type Server interface {
@@ -15,6 +16,10 @@ func CreateServer(serverType string, serverAddress string) Server {
 	switch serverType {
 	case UNIXGRAM:
 		server = &UnixDatagram{
+			Address: serverAddress,
+		}
+	case UDP:
+		server = &Udp{
 			Address: serverAddress,
 		}
 	}

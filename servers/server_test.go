@@ -10,9 +10,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateServerReturnsUnixDatagramWhenUNIXGRAM(t *testing.T) {
-	server := CreateServer(UNIXGRAM, "/tmp/sock").(*UnixDatagram)
+func TestCreateServer_ReturnsUnixgram_OnRequest(t *testing.T) {
+	server, ok := CreateServer(UNIXGRAM, "/tmp/sock").(*UnixDatagram)
+	assert.NotNil(t, ok)
 	assert.Equal(t, "/tmp/sock", server.Address)
+}
+
+func TestCreateServer_ReturnsUDP_OnRequest(t *testing.T) {
+	server, ok := CreateServer(UDP, ":8888").(*Udp)
+	assert.NotNil(t, ok)
+	assert.Equal(t, ":8888", server.Address)
 }
 
 // ==========
