@@ -1,7 +1,9 @@
+[![Travis Build Status](https://travis-ci.org/e-travel/message-dispatcher.svg?branch=master)](https://travis-ci.org/e-travel/message-dispatcher)
+
 # Message Dispatcher
 
 `message-dispatcher` is a simple message broker service that can
-receive messages through:
+receive arbitrary messages through:
 
 * unix datagram socket
 * udp endpoint
@@ -11,8 +13,9 @@ and forward them to:
 * AWS Kinesis
 * InfluxDB (through the http API)
 
-Emphasis is given to low latency as far as the service's client is
-concerned and ensuring non-blocking client requests.
+The service is fully agnostic as to the format and content of the
+messages. Emphasis is given to low latency as far as the service's
+client is concerned and ensuring non-blocking client requests.
 
 ## Instructions
 
