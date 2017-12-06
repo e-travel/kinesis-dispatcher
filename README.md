@@ -1,4 +1,6 @@
 [![Travis Build Status](https://travis-ci.org/e-travel/message-dispatcher.svg?branch=master)](https://travis-ci.org/e-travel/message-dispatcher)
+[![Go Report
+Card](https://goreportcard.com/badge/github.com/e-travel/message-dispatcher)](https://goreportcard.com/report/github.com/e-travel/message-dispatcher)
 
 # Message Dispatcher
 
