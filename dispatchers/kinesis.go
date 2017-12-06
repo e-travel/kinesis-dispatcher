@@ -96,7 +96,7 @@ func (dispatcher *Kinesis) processMessageQueue() {
 func (dispatcher *Kinesis) processBatchQueue() {
 	for batch := range dispatcher.batchQueue {
 		if output, err := dispatcher.service.PutRecords(batch); err != nil {
-			log.Error("error when posting to kinesis: %s\n", err.Error())
+			log.Errorf("error when posting to kinesis: %s\n", err.Error())
 		} else {
 			// TODO: for log.Debug
 			// for _, record := range output.Records {
