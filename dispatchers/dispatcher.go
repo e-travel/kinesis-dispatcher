@@ -7,6 +7,12 @@ type Dispatcher interface {
 	Dispatch()
 }
 
+// some common dispatcher errors
+const (
+	ErrKinesisMessageTooLarge = "MessageTooLarge"
+	ErrKinesisBatchTooLarge   = "BatchTooLarge"
+)
+
 // The following is a mock type for use in tests
 type MockDispatcher struct {
 	Messages chan string

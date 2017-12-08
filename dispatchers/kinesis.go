@@ -3,6 +3,8 @@ package dispatchers
 // this is a stub struct for the moment
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -14,19 +16,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/kinesis/kinesisiface"
 )
 
-const MEGABYTE = 1024 * 1024
-
-const KinesisMaxNumberOfRecords = 500
-const KinesisMaxSizeInBytes = 5 * MEGABYTE
 const KinesisBufferSize = 2 * KinesisMaxNumberOfRecords
-const KinesisPartitionKeyMaxSize = 256
 
 type Kinesis struct {
 	service           kinesisiface.KinesisAPI
 	streamName        string
 	maxBatchFrequency time.Duration
 	messageQueue      chan []byte
-	batchQueue        chan *kinesis.PutRecordsInput
+	batchQueue        chan *KinesisBatch
 }
 
 func NewKinesis(streamName string, awsRegion string, maxBatchFrequency time.Duration) *Kinesis {
@@ -40,7 +37,7 @@ func NewKinesis(streamName string, awsRegion string, maxBatchFrequency time.Dura
 		streamName:        streamName,
 		maxBatchFrequency: maxBatchFrequency,
 		messageQueue:      make(chan []byte, KinesisBufferSize),
-		batchQueue:        make(chan *kinesis.PutRecordsInput, KinesisBufferSize),
+		batchQueue:        make(chan *KinesisBatch, KinesisBufferSize),
 	}
 }
 
@@ -54,79 +51,61 @@ func (dispatcher *Kinesis) Put(message []byte) bool {
 }
 
 func (dispatcher *Kinesis) Dispatch() {
-	go dispatcher.processMessageQueue()
+	go dispatcher.processMessageQueue(NewKinesisBatch(dispatcher.streamName))
 	go dispatcher.processBatchQueue()
 }
 
-func (dispatcher *Kinesis) processMessageQueue() {
-	batch := newBatch(dispatcher.streamName)
-	byteCount := 0
-
+func (dispatcher *Kinesis) processMessageQueue(batch *KinesisBatch) {
 	ticker := time.NewTicker(dispatcher.maxBatchFrequency)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			if len(batch.Records) > 0 {
+			if !batch.IsEmpty() {
+				fmt.Println("ticker")
 				dispatcher.batchQueue <- batch
-				batch = newBatch(dispatcher.streamName)
-				byteCount = 0
+				batch = NewKinesisBatch(dispatcher.streamName)
 			}
 		case message := <-dispatcher.messageQueue:
-			if isBatchReady(len(batch.Records), len(message), byteCount) {
-				select {
-				case dispatcher.batchQueue <- batch:
+			fmt.Println("message")
+			if batch.IsReady(message) {
+				dispatcher.batchQueue <- batch
+				batch = NewKinesisBatch(dispatcher.streamName)
+			}
+			// try to add the message
+			err := batch.Add(message)
+			if err != nil {
+				switch err.Error() {
+				case ErrKinesisBatchTooLarge:
+					log.Warn("Dropping message (batch too large).")
+				case ErrKinesisMessageTooLarge:
+					log.Warn("Dropping message (message too large).")
 				default:
+					log.Error(err.Error())
 				}
-				batch = newBatch(dispatcher.streamName)
-				byteCount = 0
 			}
-			entry := &kinesis.PutRecordsRequestEntry{
-				Data:         message,
-				PartitionKey: aws.String(generatePartitionKey(message)),
-			}
-			// TODO: validate that the individual entry size is not above 1MB
-			batch.Records = append(batch.Records, entry)
-			byteCount += len(entry.Data) + len([]byte(*entry.PartitionKey))
 		}
 	}
 }
 
 func (dispatcher *Kinesis) processBatchQueue() {
 	for batch := range dispatcher.batchQueue {
-		if output, err := dispatcher.service.PutRecords(batch); err != nil {
-			log.Errorf("error when posting to kinesis: %s\n", err.Error())
-		} else {
-			// TODO: for log.Debug
-			// for _, record := range output.Records {
-			// 	fmt.Println(record)
-			// }
-			if *output.FailedRecordCount > 0 {
-				log.Warning("AWS Kinesis: failed records %d/%d",
-					*output.FailedRecordCount, len(batch.Records))
-			}
+		err := dispatcher.send(batch)
+		if err != nil {
+			log.Error(err.Error())
 		}
 	}
 }
 
-func newBatch(streamName string) *kinesis.PutRecordsInput {
-	return &kinesis.PutRecordsInput{
-		Records:    make([]*kinesis.PutRecordsRequestEntry, 0, KinesisMaxNumberOfRecords),
-		StreamName: aws.String(streamName),
+func (dispatcher *Kinesis) send(batch *KinesisBatch) error {
+	output, err := dispatcher.service.PutRecords(batch.records)
+	if err != nil {
+		return err
 	}
-}
-
-func isBatchReady(recordsLength int, messageLength int, byteCount int) bool {
-	// TODO: add some timer to the condition
-	return recordsLength == KinesisMaxNumberOfRecords ||
-		byteCount+messageLength >= KinesisMaxSizeInBytes
-}
-
-func generatePartitionKey(message []byte) string {
-	r := []rune(string(message))
-	if len(r) > KinesisPartitionKeyMaxSize {
-		r = r[:KinesisPartitionKeyMaxSize]
+	if *output.FailedRecordCount > 0 {
+		return errors.New(fmt.Sprintf("AWS Kinesis: failed records %d/%d",
+			*output.FailedRecordCount, len(batch.records.Records)))
 	}
-	return string(r)
+	return nil
 }
