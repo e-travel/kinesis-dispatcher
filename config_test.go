@@ -26,10 +26,6 @@ func TestSocketTypeValidation(t *testing.T) {
 	}
 }
 
-func TestProducerTypeMapping(t *testing.T) {
-	t.Skip("TODO: are values correctly mapped?")
-}
-
 func TestStreamNameValidation(t *testing.T) {
 	var testCases = []struct {
 		streamName     string
