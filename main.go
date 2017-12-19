@@ -10,26 +10,20 @@ import (
 	"github.com/e-travel/message-dispatcher/servers"
 )
 
-func createDispatcher(config *Config) (dispatchers.Dispatcher, error) {
+func createDispatcher(config *Config) (*dispatchers.MessageDispatcher, error) {
 	// choose the backend
-	var dispatcher dispatchers.Dispatcher
 	var err error
+	var svc dispatchers.Service
 	switch config.dispatcherType {
-	case "echo":
-		dispatcher = &dispatchers.Echo{}
 	case "influx":
-		client := &dispatchers.InfluxHttpClient{
-			Host:     config.influxHost,
-			Database: config.influxDatabase,
-		}
-		dispatcher = dispatchers.NewInflux(client, config.batchFrequency)
+		svc = dispatchers.NewInfluxService(config.influxHost, config.influxDatabase)
 	case "kinesis":
-		dispatcher = dispatchers.NewKinesis(config.streamName, config.awsRegion, config.batchFrequency)
+		svc = dispatchers.NewKinesisService(config.streamName, config.awsRegion)
 	default:
-		err = errors.New(fmt.Sprintf("Invalid dispatcher type: %s",
+		err = errors.New(fmt.Sprintf("Invalid backend type: %s",
 			config.dispatcherType))
 	}
-	return dispatcher, err
+	return dispatchers.NewMessageDispatcher(svc, config.bufferSize), err
 }
 
 func main() {
@@ -45,10 +39,6 @@ func main() {
 	}
 	// start the worker
 	go dispatcher.Dispatch()
-	// create the intermediate buffer
-	buffer := dispatchers.NewMessageBuffer(config.bufferSize, dispatcher)
-	// start the worker
-	go buffer.Dispatch()
 	// setup a hook which will fire when the server is up and running
 	// currently used only in tests
 	running := make(chan bool)
@@ -57,5 +47,5 @@ func main() {
 	}()
 	// TODO: capture interrupt signals and stop server OR use Context
 	server := servers.CreateServer(config.socketType, config.socketAddress)
-	server.Serve(buffer, running)
+	server.Serve(dispatcher, running)
 }

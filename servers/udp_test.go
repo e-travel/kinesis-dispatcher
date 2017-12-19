@@ -10,9 +10,7 @@ import (
 
 func TestUdpServerWillAcceptMessages(t *testing.T) {
 	// setup server
-	recipient := &dispatchers.MockDispatcher{Messages: make(chan string)}
-	buffer := dispatchers.NewMessageBuffer(3, recipient)
-	go buffer.Dispatch()
+	buffer := &dispatchers.MockDispatcher{Messages: make(chan string)}
 	running := make(chan bool)
 	// start server
 	server := &Udp{
@@ -31,7 +29,7 @@ func TestUdpServerWillAcceptMessages(t *testing.T) {
 	// receive messages
 	messages := make(map[string]bool)
 	for i := 0; i < 3; i++ {
-		messages[<-recipient.Messages] = true
+		messages[<-buffer.Messages] = true
 	}
 	// check
 	assert.True(t, messages["hello"])

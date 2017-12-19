@@ -7,8 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/kinesis"
 )
 
-const MEGABYTE = 1024 * 1024
-
 const KinesisMaxNumberOfRecords = 500
 const KinesisMaxSizeInBytes = 5 * MEGABYTE
 const KinesisPartitionKeyMaxSize = 256
@@ -30,10 +28,10 @@ func NewKinesisBatch(streamName string) *KinesisBatch {
 // inserts message into batch; if not possible returns an error
 func (batch *KinesisBatch) Add(message []byte) error {
 	if len(message) > MEGABYTE {
-		return errors.New(ErrKinesisMessageTooLarge)
+		return errors.New(ErrMessageTooLarge)
 	}
 	if batch.IsReady(message) {
-		return errors.New(ErrKinesisBatchTooLarge)
+		return errors.New(ErrBatchTooLarge)
 	}
 	entry := &kinesis.PutRecordsRequestEntry{
 		Data:         message,
@@ -44,9 +42,13 @@ func (batch *KinesisBatch) Add(message []byte) error {
 	return nil
 }
 
+func (batch *KinesisBatch) CanAdd(message []byte) bool {
+	return batch.Len() < KinesisMaxNumberOfRecords &&
+		batch.byteCount+len(message) <= KinesisMaxSizeInBytes
+}
+
 func (batch *KinesisBatch) IsReady(message []byte) bool {
-	return batch.Len() == KinesisMaxNumberOfRecords ||
-		batch.byteCount+len(message) >= KinesisMaxSizeInBytes
+	return !batch.CanAdd(message)
 }
 
 func (batch *KinesisBatch) IsEmpty() bool {

@@ -26,37 +26,14 @@ func TestCreateServer_ReturnsUDP_OnRequest(t *testing.T) {
 // Benchmarks
 // ==========
 
-type NullDispatcher struct{}
-
-func (_ *NullDispatcher) Put(_ []byte) bool {
-	return true
-}
-func (_ *NullDispatcher) Dispatch() {
-}
-
-type MockBlockingMessageBuffer struct {
-	queue     chan []byte
-	recipient dispatchers.Dispatcher
-	dispatchers.MessageBuffer
-}
-
-func (buf *MockBlockingMessageBuffer) Put(message []byte) bool {
-	buf.queue <- message
-	return true
-}
-
 func BenchmarkSendMessageToUnixDatagramServer(b *testing.B) {
 	unixDatagramSocket := "/tmp/BenchmarkUnixDatagramServer.sock"
 	defer os.Remove(unixDatagramSocket)
 	server := &UnixDatagram{Address: unixDatagramSocket}
-	dispatcher := &NullDispatcher{}
-	buffer := &MockBlockingMessageBuffer{
-		queue:     make(chan []byte, 1024),
-		recipient: dispatcher,
-	}
-	go buffer.Dispatch()
+	dispatcher := &dispatchers.MockDispatcher{Messages: make(chan string, 1024)}
+	go dispatcher.Dispatch()
 	running := make(chan bool)
-	go server.Serve(buffer, running)
+	go server.Serve(dispatcher, running)
 	<-running
 	conn, err := net.Dial("unixgram", unixDatagramSocket)
 	if err != nil {

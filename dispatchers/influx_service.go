@@ -1,31 +1,39 @@
 package dispatchers
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
 )
 
-type InfluxHttpClientInterface interface {
-	WriteLines(*bytes.Buffer) error
-}
-
-type InfluxHttpClient struct {
+type InfluxService struct {
 	Host     string
 	Database string
 }
 
-func (client *InfluxHttpClient) WriteLines(lines *bytes.Buffer) error {
-	uri, err := influxUri(client.Host, client.Database)
+func NewInfluxService(host string, database string) *InfluxService {
+	return &InfluxService{
+		Host:     host,
+		Database: database,
+	}
+}
+
+func (svc *InfluxService) CreateBatch() Batch {
+	return NewInfluxBatch()
+}
+
+func (svc *InfluxService) Send(batch Batch) error {
+	b := batch.(*InfluxBatch)
+	uri, err := influxUri(svc.Host, svc.Database)
 	if err != nil {
 		return err
 	}
 	// TODO: introduce a timeout in the request
-	resp, err := http.Post(uri, "application/x-www-form-urlencoded", lines)
+	resp, err := http.Post(uri, "application/x-www-form-urlencoded", &b.lines)
 	if err != nil {
 		return err
 	}
+	// TODO: 204 is success ; 200 indicates an error
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
 	} else {
