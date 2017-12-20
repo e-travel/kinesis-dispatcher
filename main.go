@@ -15,6 +15,8 @@ func createDispatcher(config *Config) (*dispatchers.MessageDispatcher, error) {
 	var err error
 	var svc dispatchers.Service
 	switch config.dispatcherType {
+	case "echo":
+		svc = &dispatchers.EchoService{}
 	case "influx":
 		svc = dispatchers.NewInfluxService(config.influxHost, config.influxDatabase)
 	case "kinesis":

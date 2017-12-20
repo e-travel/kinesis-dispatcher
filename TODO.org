@@ -2,11 +2,12 @@
 ** DONE Implement InfluxBatch
 ** DONE Implement InfluxService
 ** REJECTED Kill(?) dispatcher interface
-** WIP Write tests for MessageBuffer
+** DONE Implement Echo Batch/Service
+** WIP Write tests for MessageDispatcher
 ** DONE Delete kinesis.go, influx.go
 ** Write tests for:
 *** influx_service
 *** influx_batch
 *** kinesis_service
 ** Review all tests
-** Implement Echo Batch/Service
+** Integration Tests

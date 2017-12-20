@@ -13,10 +13,10 @@ func TestCreateDispatcher(t *testing.T) {
 		errMsg string
 		svc    dispatchers.Service
 	}{
-		//{Config{dispatcherType: "echo"}, "", &dispatchers.Echo{}},
+		{Config{dispatcherType: "echo"}, "", &dispatchers.EchoService{}},
 		{Config{dispatcherType: "kinesis"}, "", &dispatchers.KinesisService{}},
 		{Config{dispatcherType: "influx"}, "", &dispatchers.InfluxService{}},
-		{Config{dispatcherType: "echo"}, "Invalid backend type: echo", nil},
+		{Config{dispatcherType: "foo"}, "Invalid backend type: foo", nil},
 	}
 	for _, testCase := range testCases {
 		dispatcher, err := createDispatcher(&testCase.config)
