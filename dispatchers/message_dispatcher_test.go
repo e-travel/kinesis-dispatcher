@@ -15,7 +15,7 @@ type MockService struct {
 
 func (svc *MockService) CreateBatch() Batch {
 	args := svc.Called()
-	b, _ := args.Get(0).(Batch)
+	b, _ := args.Get(0).(*MockBatch)
 	return b
 }
 func (svc *MockService) Send(batch Batch) error {
@@ -29,6 +29,12 @@ type MockBatch struct {
 	mock.Mock
 }
 
+func (b *MockBatch) Add(message []byte) error {
+	args := b.Called(message)
+	err, _ := args.Get(0).(error)
+	return err
+}
+
 func (b *MockBatch) CanAdd(message []byte) bool {
 	args := b.Called(message)
 	ok, _ := args.Get(0).(bool)
@@ -40,6 +46,7 @@ func (b *MockBatch) Len() int {
 	return length
 }
 
+// ======== TESTS ========
 func TestMessageDispatcher_SetBatchFrequency(t *testing.T) {
 	buffer := &MessageDispatcher{}
 	buffer.SetBatchFrequency(100 * time.Second)
@@ -66,17 +73,20 @@ func TestMessageDispatcher_Put_DropsMessageWhenQueueIsFull(t *testing.T) {
 }
 
 func TestMessageDispatcher_Dispatch_WillProcessBothQueues(t *testing.T) {
-	t.Skip("FIXME: This is broken")
+	t.Skip("FIXME: remove sleep; figure out the proper way to test this")
 	// setup
 	service := &MockService{}
 	batch := &MockBatch{}
-	buffer := NewMessageDispatcher(service, 1)
-	buffer.SetBatchFrequency(1 * time.Microsecond)
-	// mock
-	service.On("Send", batch).Return(nil)
-	service.On("CreateBatch").Return(batch)
+
 	batch.On("Len").Return(1)
 	batch.On("CanAdd", mock.Anything).Return(true)
+	batch.On("Add", mock.Anything).Return(nil)
+
+	service.On("CreateBatch").Return(batch)
+	service.On("Send", batch).Return(nil)
+
+	buffer := NewMessageDispatcher(service, 1)
+	buffer.SetBatchFrequency(1 * time.Microsecond)
 
 	// add message
 	ok := buffer.Put([]byte("hello"))
@@ -84,23 +94,23 @@ func TestMessageDispatcher_Dispatch_WillProcessBothQueues(t *testing.T) {
 
 	// fire
 	buffer.Dispatch()
-	// TODO: Use a proper wait condition instead of time.Sleep
 	time.Sleep(2 * time.Second)
 	batch.AssertExpectations(t)
 	service.AssertExpectations(t)
 }
 
 func TestMessageDispatcher_processMessageQueue_WillAddMessageToBatch(t *testing.T) {
-	t.Skip("FIXME: This is broken")
 	// setup
 	service := &MockService{}
 	batch := &MockBatch{}
+
 	buffer := NewMessageDispatcher(service, 2)
 	message := []byte("Hello")
 	// mock
 	service.On("CreateBatch").Return(batch)
 	batch.On("Len").Return(1)
 	batch.On("CanAdd", message).Return(false)
+	batch.On("Add", mock.Anything).Return(nil)
 	// add message
 	ok := buffer.Put(message)
 	assert.True(t, ok)
