@@ -72,33 +72,6 @@ func TestMessageDispatcher_Put_DropsMessageWhenQueueIsFull(t *testing.T) {
 	assert.Equal(t, []byte("hello"), <-buffer.messageQueue)
 }
 
-func TestMessageDispatcher_Dispatch_WillProcessBothQueues(t *testing.T) {
-	t.Skip("FIXME: remove sleep; figure out the proper way to test this")
-	// setup
-	service := &MockService{}
-	batch := &MockBatch{}
-
-	batch.On("Len").Return(1)
-	batch.On("CanAdd", mock.Anything).Return(true)
-	batch.On("Add", mock.Anything).Return(nil)
-
-	service.On("CreateBatch").Return(batch)
-	service.On("Send", batch).Return(nil)
-
-	buffer := NewMessageDispatcher(service, 1)
-	buffer.SetBatchFrequency(1 * time.Microsecond)
-
-	// add message
-	ok := buffer.Put([]byte("hello"))
-	assert.True(t, ok)
-
-	// fire
-	buffer.Dispatch()
-	time.Sleep(2 * time.Second)
-	batch.AssertExpectations(t)
-	service.AssertExpectations(t)
-}
-
 func TestMessageDispatcher_processMessageQueue_WillAddMessageToBatch(t *testing.T) {
 	// setup
 	service := &MockService{}
@@ -114,25 +87,48 @@ func TestMessageDispatcher_processMessageQueue_WillAddMessageToBatch(t *testing.
 	// add message
 	ok := buffer.Put(message)
 	assert.True(t, ok)
+	close(buffer.messageQueue)
 	// fire
-	go buffer.processMessageQueue()
-	timer := time.NewTimer(2 * time.Second)
-	select {
-	case <-buffer.batchQueue:
-		assert.True(t, true)
-	case <-timer.C:
-		assert.Fail(t, "Timer expired")
-	}
+	buffer.processMessageQueue()
+	<-buffer.batchQueue
+	batch.AssertExpectations(t)
+	service.AssertExpectations(t)
 }
 
 func TestMessageDispatcher_processMessageQueue_WillEnqueueBatch_OnTimer(t *testing.T) {
-}
+	// setup
+	service := &MockService{}
+	batch := &MockBatch{}
 
-func TestMessageDispatcher_processMessageQueue_WillEnqueueBatch_OnReady(t *testing.T) {
+	buffer := NewMessageDispatcher(service, 2)
+	buffer.SetBatchFrequency(time.Millisecond)
+	message := []byte("Hello")
+	// mock
+	service.On("CreateBatch").Return(batch)
+	batch.On("Len").Return(1)
+	batch.On("CanAdd", message).Return(false)
+	batch.On("Add", mock.Anything).Return(nil)
+	// add message
+	ok := buffer.Put(message)
+	assert.True(t, ok)
+	close(buffer.messageQueue)
+	// fire
+	buffer.processMessageQueue()
+	<-buffer.batchQueue
+	batch.AssertExpectations(t)
+	service.AssertExpectations(t)
 }
 
 func TestMessageDispatcher_processBatchQueue_WillDispatchBatch_UsingService(t *testing.T) {
-}
-
-func TestMessageDispatcher_processBatchQueue_WillIgnoreError(t *testing.T) {
+	// setup
+	service := &MockService{}
+	buffer := NewMessageDispatcher(service, 2)
+	batch := &MockBatch{}
+	buffer.batchQueue <- batch
+	close(buffer.batchQueue)
+	// expectation
+	service.On("Send", batch).Once().Return(nil)
+	// fire
+	buffer.processBatchQueue()
+	service.AssertExpectations(t)
 }
