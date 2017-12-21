@@ -6,8 +6,8 @@
 ** DONE Write tests for MessageDispatcher
 ** DONE Delete kinesis.go, influx.go
 ** Write tests for:
-*** DONE influx_service
-*** influx_batch
-*** kinesis_service
+- [X] influx_service
+- [X] influx_batch
+- [ ] kinesis_service
 ** Review all tests
 ** Integration Tests
