@@ -33,10 +33,10 @@ func (svc *InfluxService) Send(batch Batch) error {
 	if err != nil {
 		return err
 	}
-	// TODO: 204 is success ; 200 indicates an error
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+	switch resp.StatusCode {
+	case 204:
 		return nil
-	} else {
+	default:
 		return errors.New(resp.Status)
 	}
 }
